@@ -1,0 +1,680 @@
+{
+  "schema_version": "1.0.0",
+  "id": "meridian.member.read_savings_balance",
+  "version": 1,
+  "name": "Read member savings balance",
+  "description": "Sign on to the MERIDIAN CORE servicing console, look up a member by ID, open their record, and return the member name plus the current balance and account number of their Savings account.",
+  "app": {
+    "product": "meridian-core",
+    "product_version": "r7.4.1",
+    "tenant": null,
+    "entry_url": "http://127.0.0.1:5057/login",
+    "surface": "legacy_web"
+  },
+  "inputs": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Institution member number.",
+      "example": "10001",
+      "pattern": "^\\d{4,8}$",
+      "sensitivity": "restricted",
+      "secret": false
+    },
+    {
+      "name": "operator_id",
+      "type": "string",
+      "required": true,
+      "description": "Servicing operator sign-on id.",
+      "example": "op.demo",
+      "pattern": null,
+      "sensitivity": "internal",
+      "secret": false
+    },
+    {
+      "name": "operator_passphrase",
+      "type": "string",
+      "required": true,
+      "description": "Servicing operator passphrase.",
+      "example": null,
+      "pattern": null,
+      "sensitivity": "restricted",
+      "secret": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "member_name",
+      "type": "string",
+      "description": "Name on the member record.",
+      "extract": {
+        "target": {
+          "described_as": "the Name cell on the member record header",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "row_scoped_cell",
+              "row_contains": "Member ID",
+              "cell_index": 4,
+              "exact_row_text": false
+            }
+          ],
+          "rationale": "Header is a flat label/value table. Anchored on the 'Member ID' label text rather than an absolute table index, so inserting a table above it does not shift it."
+        },
+        "source": "text",
+        "attribute": null,
+        "transform": {
+          "kind": "strip",
+          "pattern": null
+        }
+      },
+      "required": true,
+      "after_step": null,
+      "sensitivity": "restricted"
+    },
+    {
+      "name": "savings_balance",
+      "type": "money",
+      "description": "Current balance of the member's Savings account.",
+      "extract": {
+        "target": {
+          "described_as": "the balance cell of the Savings row",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "row_scoped_cell",
+              "row_contains": "Savings",
+              "cell_index": 2,
+              "exact_row_text": false
+            }
+          ],
+          "rationale": "Row anchored on the account-type value, column by position. Robust to the member holding a different number of accounts, which an absolute row index is not. Nested tables mean the outer wrapper row also contains 'Savings'; resolution takes the most specific (shortest-text) matching row."
+        },
+        "source": "text",
+        "attribute": null,
+        "transform": {
+          "kind": "money",
+          "pattern": null
+        }
+      },
+      "required": true,
+      "after_step": null,
+      "sensitivity": "restricted"
+    },
+    {
+      "name": "savings_account_number",
+      "type": "string",
+      "description": "Account number of the Savings account.",
+      "extract": {
+        "target": {
+          "described_as": "the account-number cell of the Savings row",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "row_scoped_cell",
+              "row_contains": "Savings",
+              "cell_index": 1,
+              "exact_row_text": false
+            }
+          ],
+          "rationale": "Same row anchor as the balance, adjacent column."
+        },
+        "source": "text",
+        "attribute": null,
+        "transform": {
+          "kind": "strip",
+          "pattern": null
+        }
+      },
+      "required": true,
+      "after_step": null,
+      "sensitivity": "restricted"
+    }
+  ],
+  "steps": [
+    {
+      "id": "open_signon",
+      "intent": "Open the servicing console sign-on page.",
+      "action": {
+        "kind": "navigate",
+        "url": {
+          "kind": "literal",
+          "value": "http://127.0.0.1:5057/login"
+        },
+        "frame": {
+          "kind": "top",
+          "value": null
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "Sign-on form is displayed.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPERATOR SIGN ON",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_operator_id",
+      "intent": "Type the operator sign-on id.",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "the Operator ID field on the sign-on form",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Operator ID",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "role_name",
+              "role": "textbox",
+              "name": "Operator ID",
+              "exact": true
+            },
+            {
+              "kind": "css",
+              "css": "input[name=f1]"
+            }
+          ],
+          "rationale": "No accessible name on the input, so label_cell leads. role_name is kept at rank 2 because a vendor accessibility fix would add a proper label and it would then win. The name=f1 CSS fallback is last and brittle by construction -- if replay resolves at that rank, the capability needs re-review."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_passphrase",
+      "intent": "Type the operator passphrase.",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "the Passphrase field on the sign-on form",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Passphrase",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "input[type=password]"
+            }
+          ],
+          "rationale": "Password inputs are exposed with no role in the a11y tree, so the label cell plus an input-type fallback. The type=password fallback is unusually durable here: it is semantic, not structural."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_passphrase"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "submit_signon",
+      "intent": "Submit the sign-on form.",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "the Sign On button",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Sign On",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Sign On",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Submit inputs take their accessible name from the value attribute, so role_name works and is the most durable option available."
+        }
+      },
+      "risk": "reversible_write",
+      "checkpoint": {
+        "description": "Console frameset loaded after successful sign-on.",
+        "assertion": {
+          "kind": "url_matches",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "pattern": "/console$"
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": [
+        {
+          "id": "signon_rejected",
+          "description": "Operator credentials were rejected.",
+          "detect": {
+            "kind": "text_present",
+            "frame": {
+              "kind": "top",
+              "value": null
+            },
+            "text": "Sign-on failed",
+            "case_sensitive": false
+          },
+          "classification": "hard_failure",
+          "outcome_code": null,
+          "recovery": null,
+          "escalate": false,
+          "message": "Sign-on was rejected. Treated as a hard failure rather than a business outcome: the caller supplied bad operator credentials, which is a configuration fault in the invocation, not an answer about a member."
+        }
+      ]
+    },
+    {
+      "id": "open_member_search",
+      "intent": "Open Member Search from the function menu.",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "the Member Search item in the left-hand function menu",
+          "frame": {
+            "kind": "name",
+            "value": "nav"
+          },
+          "strategies": [
+            {
+              "kind": "text",
+              "text": "Member Search",
+              "element_role": "cell",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Member Search",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Non-semantic navigation: there is no link or button role to target, only cell text. Scoped to role=cell first to avoid matching a heading elsewhere on the page."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "Member search form is displayed in the main frame.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "text": "MEMBER SEARCH",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_member_id",
+      "intent": "Type the member ID being looked up.",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "the Member ID input on the search form",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Member ID",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "form input[name=f1]"
+            }
+          ],
+          "rationale": "Same unnamed-textbox pattern as sign-on. Note 'Member ID' also appears as a results-table column header; label_cell resolves within the row containing the label, and the header row holds no textbox, so the match is unambiguous."
+        },
+        "value": {
+          "kind": "param",
+          "param": "member_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "run_search",
+      "intent": "Run the member search.",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "the Search button on the member search form",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Search",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Search",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Submit input with a value attribute; role+name is stable."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "A matching member row is listed.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "text": "Open Record",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "open_record",
+      "intent": "Open the member record from the results row.",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "the Open Record link on the search result row",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Open Record",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Open Record",
+              "element_role": "link",
+              "exact": true
+            }
+          ],
+          "rationale": "A real anchor, so role+name applies. Search is by exact member id and returns at most one row, so there is no row-disambiguation problem; a multi-result variant would need a row_scoped target keyed on the id."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "Member record with the account table is displayed.",
+        "assertion": {
+          "kind": "all_of",
+          "of": [
+            {
+              "kind": "text_present",
+              "frame": {
+                "kind": "name",
+                "value": "main"
+              },
+              "text": "MEMBER RECORD",
+              "case_sensitive": false
+            },
+            {
+              "kind": "text_present",
+              "frame": {
+                "kind": "name",
+                "value": "main"
+              },
+              "text": "ACCOUNT TYPE",
+              "case_sensitive": false
+            }
+          ]
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    }
+  ],
+  "signals": [
+    {
+      "id": "member_not_found",
+      "description": "Search returned no member for the supplied id.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "NO RECORD FOUND",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "MEMBER_NOT_FOUND",
+      "recovery": null,
+      "escalate": false,
+      "message": "No member matches the supplied member ID."
+    },
+    {
+      "id": "permission_denied",
+      "description": "Record exists but this operator role is not entitled to it.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "PERMISSION DENIED",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "PERMISSION_DENIED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The member record exists but the automation operator is not entitled to view it. A caller may legitimately need to know this, so it is an outcome rather than a failure -- but it also means the answer was not obtained, and the caller must branch on it."
+    },
+    {
+      "id": "system_notice",
+      "description": "Unscheduled maintenance interstitial blocking the flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "SYSTEM NOTICE",
+        "case_sensitive": false
+      },
+      "classification": "recoverable",
+      "outcome_code": null,
+      "recovery": {
+        "kind": "dismiss_and_retry",
+        "dismiss": {
+          "described_as": "the Acknowledge button on the system notice interstitial",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Acknowledge",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Acknowledge",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Dismissal control for the maintenance interstitial."
+        },
+        "max_attempts": 2
+      },
+      "escalate": false,
+      "message": "Dismissed the maintenance interstitial and retried the step."
+    },
+    {
+      "id": "session_expired",
+      "description": "Operator sign-on lapsed mid-flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "SESSION EXPIRED",
+        "case_sensitive": false
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": true,
+      "message": "The servicing session expired mid-flow. Re-authenticating unattended is deliberately not automated: it would mean the system holds and replays operator credentials outside the invocation that supplied them. A human re-establishes the session and hands control back."
+    },
+    {
+      "id": "app_error",
+      "description": "The servicing subsystem returned a fault page.",
+      "detect": {
+        "kind": "any_of",
+        "of": [
+          {
+            "kind": "text_present",
+            "frame": {
+              "kind": "name",
+              "value": "main"
+            },
+            "text": "APPLICATION ERROR",
+            "case_sensitive": false
+          },
+          {
+            "kind": "text_present",
+            "frame": {
+              "kind": "top",
+              "value": null
+            },
+            "text": "APPLICATION ERROR",
+            "case_sensitive": false
+          }
+        ]
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": false,
+      "message": "The application returned fault MCX-5000."
+    }
+  ],
+  "success": {
+    "description": "The member record is open and the account table shows a Savings row, so the requested balance is on screen.",
+    "assertion": {
+      "kind": "all_of",
+      "of": [
+        {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "text": "CURRENT BALANCE",
+          "case_sensitive": false
+        },
+        {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "text": "Savings",
+          "case_sensitive": false
+        }
+      ]
+    },
+    "timeout_ms": 8000
+  },
+  "approval": "draft",
+  "provenance": {
+    "discovered_at": "2026-08-18T05:10:34.614615Z",
+    "model": "n/a",
+    "discovery_run_id": null,
+    "transcript_digest": null,
+    "recorded_by": "human"
+  },
+  "tags": [
+    "member",
+    "read-only",
+    "reference"
+  ]
+}

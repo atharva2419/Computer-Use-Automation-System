@@ -1,0 +1,54 @@
+<html>
+<head><title>Member Record</title></head>
+<body bgcolor="#ffffff" topmargin="0" leftmargin="0">
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr><td bgcolor="#808080" height="22">
+  <font face="Arial" size="2" color="#ffffff"><b>&nbsp;MEMBER RECORD</b></font>
+</td></tr>
+</table>
+
+<table border="0" cellpadding="6" cellspacing="0">
+<tr>
+  <td><font face="Arial" size="2">Member ID</font></td>
+  <td><font face="Arial" size="2"><b>{{ member.member_id }}</b></font></td>
+  <td width="30"></td>
+  <td><font face="Arial" size="2">Name</font></td>
+  <td><font face="Arial" size="2"><b>{{ member.name }}</b></font></td>
+</tr>
+<tr>
+  <td><font face="Arial" size="2">Status</font></td>
+  <td><font face="Arial" size="2"><b>{{ member.status }}</b></font></td>
+  <td></td>
+  <td><font face="Arial" size="2">Branch</font></td>
+  <td><font face="Arial" size="2"><b>{{ member.branch }}</b></font></td>
+</tr>
+</table>
+
+<table border="0" cellpadding="4" cellspacing="0" width="98%">
+<tr><td>
+  <table border="1" cellpadding="4" cellspacing="0" width="100%" bgcolor="#eeeeee">
+  <tr bgcolor="#c0c0c0">
+    <td><font face="Arial" size="1"><b>ACCOUNT TYPE</b></font></td>
+    <td><font face="Arial" size="1"><b>ACCOUNT NUMBER</b></font></td>
+    <td align="right"><font face="Arial" size="1"><b>CURRENT BALANCE</b></font></td>
+  </tr>
+  {% for acct in member.accounts %}
+  <tr>
+    <td><font face="Arial" size="2">{{ acct.kind }}</font></td>
+    <td><font face="Arial" size="2">{{ acct.number }}</font></td>
+    <td align="right"><font face="Arial" size="2">{{ "%.2f"|format(acct.balance) }}</font></td>
+  </tr>
+  {% endfor %}
+  </table>
+</td></tr>
+</table>
+
+<table border="0" cellpadding="6">
+<tr><td>
+  <input type="button" value="Open Sub-Account"
+         onclick="location.href='/frame/subaccount/{{ member.member_id }}'">
+</td></tr>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<html>
+<head><title>Request Confirmed</title></head>
+<body bgcolor="#ffffff" topmargin="0" leftmargin="0">
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr><td bgcolor="#808080" height="22">
+  <font face="Arial" size="2" color="#ffffff"><b>&nbsp;SUB-ACCOUNT CONFIRMATION</b></font>
+</td></tr>
+</table>
+
+<table border="0" cellpadding="6" cellspacing="0" width="98%" bgcolor="#ddffdd">
+<tr><td>
+  <font face="Arial" size="2" color="#006600"><b>REQUEST CONFIRMED</b></font>
+</td></tr>
+</table>
+
+<table border="0" cellpadding="6" cellspacing="0">
+<tr>
+  <td><font face="Arial" size="2">Member ID</font></td>
+  <td><font face="Arial" size="2"><b>{{ member.member_id }}</b></font></td>
+</tr>
+<tr>
+  <td><font face="Arial" size="2">Product Type</font></td>
+  <td><font face="Arial" size="2"><b>{{ kind }}</b></font></td>
+</tr>
+<tr>
+  <td><font face="Arial" size="2">New Account Number</font></td>
+  <td><font face="Arial" size="2"><b>{{ number }}</b></font></td>
+</tr>
+<tr>
+  <td><font face="Arial" size="2">Opening Deposit</font></td>
+  <td><font face="Arial" size="2"><b>{{ "%.2f"|format(deposit) }}</b></font></td>
+</tr>
+</table>
+
+</body>
+</html>

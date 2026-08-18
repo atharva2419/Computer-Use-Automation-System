@@ -1,0 +1,60 @@
+<html>
+<head><title>Member Search</title></head>
+<body bgcolor="#ffffff" topmargin="0" leftmargin="0">
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr><td bgcolor="#808080" height="22">
+  <font face="Arial" size="2" color="#ffffff"><b>&nbsp;MEMBER SEARCH</b></font>
+</td></tr>
+</table>
+
+<form method="post" action="/frame/search">
+<table border="0" cellpadding="6" cellspacing="0">
+<tr>
+  <!-- Label is adjacent cell text only. No <label for>, no id, no test id:
+       the accessibility tree sees an unnamed textbox. -->
+  <td><font face="Arial" size="2">Member ID</font></td>
+  <td><input type="text" name="f1" size="16" value="{{ query }}"></td>
+  <td><input type="submit" value="Search"></td>
+</tr>
+</table>
+</form>
+
+{% if notfound %}
+<table border="0" cellpadding="6" cellspacing="0" width="98%" bgcolor="#ffdddd">
+<tr><td>
+  <font face="Arial" size="2" color="#aa0000">
+    <b>NO RECORD FOUND</b> &#8212; no member matches ID {{ query }}.
+  </font>
+</td></tr>
+</table>
+{% endif %}
+
+{% if result %}
+<table border="0" cellpadding="4" cellspacing="0" width="98%">
+<tr><td>
+  <table border="1" cellpadding="4" cellspacing="0" width="100%" bgcolor="#eeeeee">
+  <tr bgcolor="#c0c0c0">
+    <td><font face="Arial" size="1"><b>MEMBER ID</b></font></td>
+    <td><font face="Arial" size="1"><b>NAME</b></font></td>
+    <td><font face="Arial" size="1"><b>STATUS</b></font></td>
+    <td><font face="Arial" size="1"><b>BRANCH</b></font></td>
+    <td><font face="Arial" size="1"><b>&nbsp;</b></font></td>
+  </tr>
+  <tr>
+    <td><font face="Arial" size="2">{{ result.member_id }}</font></td>
+    <td><font face="Arial" size="2">{{ result.name }}</font></td>
+    <td><font face="Arial" size="2">{{ result.status }}</font></td>
+    <td><font face="Arial" size="2">{{ result.branch }}</font></td>
+    <td>
+      <a href="/frame/member/{{ result.member_id }}">
+        <font face="Arial" size="2">Open Record</font>
+      </a>
+    </td>
+  </tr>
+  </table>
+</td></tr>
+</table>
+{% endif %}
+
+</body>
+</html>
