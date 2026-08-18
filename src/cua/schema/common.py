@@ -128,10 +128,6 @@ Assertion = Annotated[
 # ---------------------------------------------------------------------------
 
 
-class RiskClass(str):
-    """Marker namespace; the real type is the Literal below."""
-
-
 Risk = Literal["safe", "reversible_write", "irreversible"]
 """How dangerous an action is if it fires when it should not.
 
