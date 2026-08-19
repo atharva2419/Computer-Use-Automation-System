@@ -25,11 +25,8 @@ from typing import Any
 import pytest
 from werkzeug.serving import make_server
 
-from cua.replay import (
-    NullSink,
-    PolicyDecision,
-    ReplayEngine,
-)
+from cua.guardrails import GateDecision, GateRequest, Policy, PolicyGate
+from cua.replay import NullSink, ReplayEngine
 from cua.schema.capability import Capability
 from cua.schema.result import StepRecord
 from cua.session import Session
@@ -84,13 +81,29 @@ def pristine() -> Iterator[None]:
     fixture_data.reset()
 
 
+@pytest.fixture
+def gate(base_url: str) -> PolicyGate:
+    """The shipped policy, with the ephemeral test origin allowed.
+
+    Only the origin list is adjusted -- which is genuinely per-deployment
+    configuration, not a rule. Routes, denied routes, permitted action kinds
+    and every risk rule are exactly what ships in config/policy.yaml, so the
+    tests exercise the real guardrail rather than a lenient copy of it.
+    """
+    policy = Policy.load()
+    policy.allowlist.origins = [base_url]
+    return PolicyGate(policy)
+
+
 class Harness:
     """Runs a capability and tears the browser down."""
 
-    def __init__(self) -> None:
+    def __init__(self, gate: Any = None) -> None:
         self.session: Session | None = None
+        self.gate = gate
 
     def run(self, capability: Capability, params: dict[str, Any], **kwargs: Any):
+        kwargs.setdefault("gate", self.gate)
         surface = PlaywrightWebSurface(headless=True).start()
         self.session = Session(surface=surface)
         try:
@@ -100,8 +113,8 @@ class Harness:
 
 
 @pytest.fixture
-def harness() -> Harness:
-    return Harness()
+def harness(gate: PolicyGate) -> Harness:
+    return Harness(gate=gate)
 
 
 class ArmAfterStep(NullSink):
@@ -143,7 +156,7 @@ def test_happy_path_returns_typed_outputs(harness: Harness, capability: Capabili
 
 def test_parameters_actually_drive_the_run(harness: Harness, capability: Capability) -> None:
     result = harness.run(capability, {"member_id": "10002", **CREDS})
-    assert result.status == "success"
+    assert result.status == "success", getattr(result, "error", None)
     assert result.outputs["member_name"] == "Bo Ferreira"
     assert result.outputs["savings_balance"] == 15980.00
 
@@ -151,7 +164,7 @@ def test_parameters_actually_drive_the_run(harness: Harness, capability: Capabil
 def test_replay_is_deterministic(harness: Harness, capability: Capability) -> None:
     first = harness.run(capability, {"member_id": "10001", **CREDS})
     fixture_data.reset()
-    second = Harness().run(capability, {"member_id": "10001", **CREDS})
+    second = Harness(gate=harness.gate).run(capability, {"member_id": "10001", **CREDS})
 
     # Compared separately rather than chained: a chained comparison narrows
     # only its last operand, so `first` would stay the full ReplayResult union
@@ -387,6 +400,96 @@ def test_rewinding_across_an_irreversible_step_is_refused(
 
 
 # ---------------------------------------------------------------------------
+# Guardrails, end to end (brief 3.4)
+# ---------------------------------------------------------------------------
+
+
+def test_an_irreversible_step_routes_to_a_human_mid_run(
+    harness: Harness, capability: Capability
+) -> None:
+    """Risky actions are not blocked -- a person approves them, and it is logged.
+
+    Blocking would make the sub-account flow impossible to run at all. Routing
+    to the operator instead means the flow completes, a human owns the
+    consequential decision, and the approval lands in the run evidence.
+    """
+    from cua.replay import EscalationOutcome
+
+    raw = capability.model_dump()
+    for step in raw["steps"]:
+        if step["id"] == "run_search":
+            step["risk"] = "irreversible"
+    risky = Capability.model_validate(raw)
+
+    approvals: list[str] = []
+
+    class ApprovingOperator:
+        def request(self, context):
+            approvals.append(context.reason)
+            return EscalationOutcome(
+                resolved=True, resolution="resumed", operator="supervisor@test"
+            )
+
+    result = harness.run(
+        risky, {"member_id": "10001", **CREDS}, escalation=ApprovingOperator()
+    )
+
+    assert len(approvals) == 1
+    assert "approval" in approvals[0]
+    assert result.status == "success", getattr(result, "error", None)
+    assert len(result.escalations) == 1
+    assert result.escalations[0].operator == "supervisor@test"
+
+
+def test_the_agent_cannot_reach_the_fault_injection_endpoint(
+    harness: Harness, capability: Capability
+) -> None:
+    """A run must not be able to switch off its own error conditions."""
+    raw = capability.model_dump()
+    raw["steps"][0]["action"]["url"]["value"] = (
+        raw["app"]["entry_url"].replace("/login", "/__chaos")
+    )
+    tampered = Capability.model_validate(raw)
+
+    result = harness.run(tampered, {"member_id": "10001", **CREDS})
+
+    assert result.status == "failed"
+    assert result.error.category == "policy_denied"
+    assert "__chaos" in result.error.observed
+    assert result.steps == [], "the navigation must not have happened"
+
+
+def test_failure_diagnostics_are_redacted(
+    harness: Harness, capability: Capability
+) -> None:
+    """Excerpts quoted for debugging get scrubbed; declared outputs do not.
+
+    The failure here is forced on the member record screen, so the excerpt the
+    engine captures contains a real account number.
+    """
+    # Asserting the *absence* of something that is present makes the engine
+    # quote it: the excerpt window centres on the text it found, so the
+    # captured diagnostic genuinely contains an account number rather than
+    # merely the head of the page.
+    raw = capability.model_dump()
+    raw["success"]["assertion"] = {
+        "kind": "text_absent",
+        "frame": {"kind": "name", "value": "main"},
+        "text": "SAV-0001",
+        "case_sensitive": False,
+    }
+    raw["success"]["timeout_ms"] = 1000
+    doomed = Capability.model_validate(raw)
+
+    result = harness.run(doomed, {"member_id": "10001", **CREDS})
+
+    assert result.status == "failed"
+    assert "SAV-0001" not in result.error.observed
+    assert "[REDACTED:account_number]" in result.error.observed
+    assert "demo-pass" not in result.error.observed
+
+
+# ---------------------------------------------------------------------------
 # Caller-side rejection -- before the browser opens
 # ---------------------------------------------------------------------------
 
@@ -431,10 +534,10 @@ def test_policy_gate_can_stop_a_step_before_it_acts(
     harness: Harness, capability: Capability
 ) -> None:
     class DenyNavigation:
-        def check(self, capability, step, url):
-            if step.action.kind == "click" and step.id == "run_search":
-                return PolicyDecision(allowed=False, reason="search disabled by policy")
-            return PolicyDecision(allowed=True)
+        def check(self, request: GateRequest) -> GateDecision:
+            if request.step.action.kind == "click" and request.step.id == "run_search":
+                return GateDecision(allowed=False, reason="search disabled by policy")
+            return GateDecision(allowed=True)
 
     result = harness.run(capability, {"member_id": "10001", **CREDS}, gate=DenyNavigation())
 

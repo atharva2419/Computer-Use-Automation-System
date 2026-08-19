@@ -1,0 +1,120 @@
+# Guardrail policy (brief 3.4).
+#
+# This file is the whole of what the automation is permitted to do. It is
+# configuration rather than code on purpose: the people who should own these
+# decisions at a bank -- risk, compliance, the application owner -- must be
+# able to read and change them without touching Python, and a change here is a
+# reviewable diff.
+#
+# Two principles it encodes:
+#
+#   1. The agent never classifies its own actions. Risk is assigned here, from
+#      the route, the action kind and the control being activated. If the model
+#      could self-report "this one is safe", the guardrail would be advisory,
+#      and a page carrying injected text could talk its way past it.
+#
+#   2. Where this file and an artifact disagree about risk, the more dangerous
+#      of the two wins. An artifact is a recording; this is policy.
+
+version: 1
+
+allowlist:
+  # Nothing outside these origins is reachable, on either path.
+  origins:
+    - "http://127.0.0.1:5057"
+    - "http://localhost:5057"
+
+  # Path globs the automation may operate on.
+  routes:
+    - "/"
+    - "/login"
+    - "/console"
+    - "/frame/*"
+
+  # Explicit denials win over the allowlist above.
+  #
+  # /__chaos is the target app's fault-injection endpoint. It is reachable
+  # from the same origin and would let a run disable its own error conditions,
+  # so it is denied structurally rather than by convention. It also serves as
+  # a live demonstration that the allowlist does something: the tests assert
+  # the agent cannot reach it.
+  denied_routes:
+    - "/__chaos*"
+
+  # Action kinds the automation may perform at all. There is no "execute
+  # script" or "upload file" here, and adding one would be a policy change.
+  actions:
+    - navigate
+    - click
+    - fill
+    - select
+    - press
+    - wait_for
+
+risk:
+  # Rules are evaluated in order; the first match wins. An action that matches
+  # nothing takes `default`.
+  #
+  # Note what is *not* risky: filling a field changes nothing on the server.
+  # Typing into the opening-deposit box is safe; clicking Submit Request is
+  # what creates the account. Keying risk off the control being activated
+  # rather than off "this screen is a form" keeps the dangerous set small and
+  # honest.
+  rules:
+    - name: open a new sub-account
+      route: "/frame/subaccount/*"
+      action: click
+      control: "Submit Request"
+      risk: irreversible
+
+    - name: sign-on submits credentials but creates nothing
+      route: "/login"
+      action: click
+      risk: safe
+
+  default: safe
+
+  # What to do with each class. Chosen, not defaulted:
+  #
+  #   safe / reversible_write -> allow.
+  #     Reads and undoable edits are the substance of these flows. Blocking
+  #     them would mean only ever automating read-only screens.
+  #
+  #   irreversible -> require_human.
+  #     Not `block`: blocking makes the sub-account flow impossible to record
+  #     or replay at all, and "reach the confirmation screen" is exactly the
+  #     kind of task this system exists for. Routing to a person instead means
+  #     the flow completes, a human owns the consequential decision, and the
+  #     approval is recorded in the run evidence. It reuses the escalation
+  #     mechanism already built for stuck runs, so there is one control-transfer
+  #     path rather than two.
+  handling:
+    safe: allow
+    reversible_write: allow
+    irreversible: require_human
+
+  # Discovery is the model exploring an unfamiliar UI, so it is held to at
+  # least the replay standard. Reversible writes stay permitted -- the agent
+  # cannot learn the next screen without performing the action that reveals
+  # it -- but anything irreversible still needs a person.
+  discovery_handling:
+    safe: allow
+    reversible_write: allow
+    irreversible: require_human
+
+redaction:
+  # Applied to everything the system writes down: logs, evidence files,
+  # failure diagnostics, escalation payloads, recorded artifacts.
+  #
+  # Declared outputs are deliberately *not* redacted. A caller that invoked
+  # "read the savings balance" is entitled to the balance; the rule is that
+  # the declared interface returns data and everything else is scrubbed.
+  patterns:
+    - name: ssn
+      regex: '\b\d{3}-\d{2}-\d{4}\b'
+    - name: card
+      regex: '\b(?:\d[ -]?){13,19}\b'
+    - name: account_number
+      regex: '\b(?:SAV|CHK|HOL)-\d{3,}\b'
+    - name: email
+      regex: '\b[\w.+-]+@[\w-]+\.[\w.]+\b'

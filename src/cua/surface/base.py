@@ -64,6 +64,17 @@ class SurfaceTimeout(SurfaceError):
     """An action or wait exceeded its bound."""
 
 
+class SurfaceUnavailable(SurfaceError):
+    """The application could not be reached at all.
+
+    Connection refused, DNS failure, TLS rejection. Distinguished from other
+    surface errors because it is the *application* that is unavailable, not
+    the automation that is broken -- and a run that reports "internal error"
+    when the server is simply down sends whoever is debugging it to the wrong
+    place entirely.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Perception
 # ---------------------------------------------------------------------------

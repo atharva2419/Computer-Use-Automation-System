@@ -47,6 +47,7 @@ from .base import (
     Resolution,
     StrategyAttempt,
     SurfaceTimeout,
+    SurfaceUnavailable,
     TargetNotResolved,
 )
 
@@ -440,6 +441,11 @@ class PlaywrightWebSurface:
                 self._frame(ref, timeout_ms=5000).goto(url, wait_until="load")
         except PWTimeout as exc:
             raise SurfaceTimeout(f"navigation to {url} timed out") from exc
+        except PWError as exc:
+            # Connection refused, DNS failure, TLS error. The application is
+            # not reachable -- which is the app's problem, not a defect in the
+            # artifact, and the failure report should say so.
+            raise SurfaceUnavailable(f"navigation to {url} failed: {_brief(exc)}") from exc
         self.settle()
 
     def click(self, target: Target, timeout_ms: int = 5000) -> Resolution:

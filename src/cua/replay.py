@@ -30,6 +30,8 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from . import assertions, extract, params
+from .guardrails import GateDecision, GateRequest, PolicyGate
+from .redaction import Redactor
 from .schema.capability import (
     Capability,
     Checkpoint,
@@ -57,7 +59,13 @@ from .schema.result import (
     StepRecord,
 )
 from .session import Actor, Session
-from .surface.base import Resolution, SurfaceError, SurfaceTimeout, TargetNotResolved
+from .surface.base import (
+    Resolution,
+    SurfaceError,
+    SurfaceTimeout,
+    SurfaceUnavailable,
+    TargetNotResolved,
+)
 
 POLL_MS = 200
 
@@ -67,29 +75,10 @@ POLL_MS = 200
 # ---------------------------------------------------------------------------
 
 
-@dataclass(slots=True)
-class PolicyDecision:
-    allowed: bool
-    reason: str = ""
-    require_human: bool = False
+class Gate(Protocol):
+    """Consulted before every action. Implemented in ``cua.guardrails``."""
 
-
-class PolicyGate(Protocol):
-    """Consulted before every action. Implemented for real in cua.guardrails."""
-
-    def check(self, capability: Capability, step: Step, url: str) -> PolicyDecision: ...
-
-
-class AllowAllGate:
-    """Default gate: permits everything.
-
-    Deliberately explicit rather than an ``if gate is not None`` branch, so the
-    engine has exactly one code path and a permissive policy is a visible
-    choice at the call site instead of an accident.
-    """
-
-    def check(self, capability: Capability, step: Step, url: str) -> PolicyDecision:
-        return PolicyDecision(allowed=True)
+    def check(self, request: GateRequest) -> GateDecision: ...
 
 
 @dataclass(slots=True)
@@ -206,15 +195,28 @@ class ReplayEngine:
     def __init__(
         self,
         session: Session,
-        gate: PolicyGate | None = None,
+        gate: Gate | None = None,
         escalation: EscalationHandler | None = None,
         sink: EvidenceSink | None = None,
+        redactor: Redactor | None = None,
         max_duration_ms: int = 120_000,
     ) -> None:
         self.session = session
-        self.gate = gate or AllowAllGate()
+        # Defaults to the shipped policy, and raises if it is missing rather
+        # than silently running unguarded. An unguarded run should require
+        # someone to say so at the call site.
+        self.gate = gate if gate is not None else PolicyGate.from_file()
         self.escalation = escalation or NoOperatorAvailable()
         self.sink = sink or NullSink()
+        # Redaction patterns live in the same policy file as the allowlist, so
+        # take them from the gate by default. Otherwise every caller would have
+        # to remember to wire redaction up separately, and the one that forgets
+        # is the one that writes a member's account number into a log.
+        if redactor is not None:
+            self.redactor = redactor
+        else:
+            policy = getattr(self.gate, "policy", None)
+            self.redactor = policy.redactor() if policy is not None else Redactor()
         self.max_duration_ms = max_duration_ms
 
         self.run_id = uuid.uuid4().hex[:12]
@@ -245,6 +247,13 @@ class ReplayEngine:
                     observed=str(exc),
                 ),
             )
+
+        # Teach the redactor the credential-like values this invocation was
+        # given, so they can never surface in a log, an evidence file or an
+        # escalation record. They are held for the run only.
+        self.redactor.learn_secrets(
+            bound.get(name) for name in params.secret_names(capability)
+        )
 
         self.session.claim(Actor.AGENT, reason=f"replay {capability.id}")
 
@@ -282,8 +291,16 @@ class ReplayEngine:
         started = time.monotonic()
         surface = self._surface()
 
-        decision = self.gate.check(capability, step, self._current_url())
-        if not decision.allowed and not decision.require_human:
+        decision = self.gate.check(
+            GateRequest(
+                capability=capability,
+                step=step,
+                step_index=index,
+                current_url=self._current_url(),
+                target_url=self._target_url(step, bound),
+            )
+        )
+        if not decision.allowed:
             self._terminate_failure(
                 capability,
                 FailureDetail(
@@ -291,18 +308,21 @@ class ReplayEngine:
                     step_id=step.id,
                     step_index=index,
                     intent=step.intent,
-                    expected=f"policy to permit a {step.risk} {step.action.kind}",
+                    expected=f"policy to permit a {decision.risk} {step.action.kind}",
                     observed=decision.reason or "denied by policy",
                 ),
             )
         if decision.require_human:
+            # Risky-but-permitted: the flow continues, but a person owns the
+            # decision. Same mechanism as a stuck run, and the approval lands
+            # in the run evidence.
             self._escalate(
                 capability,
                 step,
                 index,
                 reason=decision.reason or "policy requires human confirmation",
                 signal_id=None,
-                observed="awaiting operator approval",
+                observed=f"awaiting operator approval for a {decision.risk} action",
             )
 
         attempts_by_signal: dict[str, int] = {}
@@ -337,6 +357,21 @@ class ReplayEngine:
                         step_index=index,
                         intent=step.intent,
                         expected=f"step {step.id!r} to complete",
+                        observed=str(exc),
+                    ),
+                )
+            except SurfaceUnavailable as exc:
+                # The application is down or unreachable. Not our defect, and
+                # not drift -- categorising it as an internal error would send
+                # whoever debugs it looking at the artifact.
+                self._terminate_failure(
+                    capability,
+                    FailureDetail(
+                        category="app_error",
+                        step_id=step.id,
+                        step_index=index,
+                        intent=step.intent,
+                        expected="the application to be reachable",
                         observed=str(exc),
                     ),
                 )
@@ -571,16 +606,20 @@ class ReplayEngine:
         )
         outcome = self.escalation.request(context)
 
+        # The live handler was given the unredacted context deliberately: the
+        # operator is looking at the real screen, so scrubbing their briefing
+        # would be theatre. What gets *persisted* is scrubbed, because the
+        # record outlives the intervention and is read by others.
         self._escalations.append(
             EscalationRecord(
                 request_id=request_id,
                 step_id=step.id,
-                reason=reason,
+                reason=self.redactor.text(reason),
                 opened_at=opened,
                 resolved_at=datetime.now(timezone.utc),
                 resolution=outcome.resolution,  # type: ignore[arg-type]
                 operator=outcome.operator,
-                human_actions=outcome.actions,
+                human_actions=[self.redactor.text(a) for a in outcome.actions],
             )
         )
 
@@ -755,6 +794,14 @@ class ReplayEngine:
         raise _Terminate("failed", self._fail(capability, detail))
 
     def _fail(self, capability: Capability, detail: FailureDetail) -> ReplayFailure:
+        # Failure diagnostics quote the screen, and the screen is regulated
+        # data. Declared outputs are returned to the caller unredacted -- they
+        # asked for them -- but an excerpt captured for debugging is scrubbed,
+        # because it is written to disk and read by people who did not make the
+        # request.
+        detail.expected = self.redactor.text(detail.expected)
+        detail.observed = self.redactor.text(detail.observed)
+
         try:
             shot = self.session.surface.screenshot()
         except Exception:  # noqa: BLE001 - evidence capture must never mask the fault
@@ -782,7 +829,7 @@ class ReplayEngine:
             strategy_rank=resolution.rank if resolution else None,
             duration_ms=int((time.monotonic() - started) * 1000),
             checkpoint_ok=checkpoint_ok,
-            note=note,
+            note=self.redactor.text(note),
         )
         self._steps.append(record)
         self.sink.on_step(self.run_id, record)
@@ -798,6 +845,20 @@ class ReplayEngine:
             return self.session.surface.frame_url(_TOP)
         except SurfaceError:
             return ""
+
+    def _target_url(self, step: Step, bound: dict[str, str]) -> str | None:
+        """Where a navigation would land, for the allowlist check.
+
+        Checking only the current page would let one navigate step walk the
+        session straight off the allowlist -- the check has to happen before
+        the jump, not after it.
+        """
+        if not isinstance(step.action, NavigateAction):
+            return None
+        try:
+            return params.resolve(step.action.url, bound)
+        except params.ParamError:
+            return None
 
     def _check_deadline(self, capability: Capability, step: Step, index: int) -> None:
         if time.monotonic() > self._deadline:

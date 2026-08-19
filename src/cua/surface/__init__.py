@@ -17,6 +17,7 @@ from .base import (
     Surface,
     SurfaceError,
     SurfaceTimeout,
+    SurfaceUnavailable,
     TargetNotResolved,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "Surface",
     "SurfaceError",
     "SurfaceTimeout",
+    "SurfaceUnavailable",
     "TargetNotResolved",
     "PlaywrightWebSurface",
 ]
