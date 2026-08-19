@@ -34,7 +34,7 @@ from cua.schema.targets import (
     TextStrategy,
 )
 from cua.session import Actor, Session
-from cua.surface.base import Resolution, TargetNotResolved
+from cua.surface.base import Resolution, Surface, TargetNotResolved
 from cua.surface.web import PlaywrightWebSurface
 
 BASE = "http://127.0.0.1:5057"
@@ -75,7 +75,7 @@ def report(action: str, target: Target, resolution: Resolution) -> None:
         )
 
 
-def check(surface: PlaywrightWebSurface, description: str, assertion) -> None:
+def check(surface: Surface, description: str, assertion) -> None:
     result = wait_until(surface, assertion, timeout_ms=5000)
     tone = GREEN if result.ok else RED
     verdict = "HELD" if result.ok else "FAILED"

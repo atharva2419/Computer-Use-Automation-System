@@ -27,7 +27,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .common import Assertion, FrameRef, Risk, Sensitivity, ValueRef
+from .common import RISK_ORDER, Assertion, FrameRef, Risk, Sensitivity, ValueRef
 from .targets import Target
 
 SCHEMA_VERSION = "1.0.0"
@@ -437,8 +437,17 @@ class Capability(_Strict):
 
     @property
     def max_risk(self) -> Risk:
-        order: list[Risk] = ["safe", "reversible_write", "irreversible"]
-        return max((s.risk for s in self.steps), key=order.index, default="safe")
+        """The riskiest thing this capability does.
+
+        Drives approval: a read-only capability can reasonably be replayed
+        unattended, one that creates records should not be until a human has
+        approved it.
+        """
+        worst: Risk = "safe"
+        for step in self.steps:
+            if RISK_ORDER[step.risk] > RISK_ORDER[worst]:
+                worst = step.risk
+        return worst
 
 
 def _param_refs(action: Action) -> list[str]:

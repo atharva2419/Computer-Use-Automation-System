@@ -270,9 +270,17 @@ def _open_member(surface: PlaywrightWebSurface, member_id: str) -> None:
 
 
 def test_full_flow_reaches_the_member_record(signed_on: PlaywrightWebSurface) -> None:
+    """Assertions that follow an action must be *waited on*, not sampled.
+
+    ``settle()`` is best effort: on a frameset a child navigation can still be
+    committing when it returns, and a frame mid-swap briefly has no body at
+    all. The engine never hits this because it polls every checkpoint against
+    a deadline, which is the real synchronisation primitive -- so tests use
+    the same primitive rather than relying on a lucky sample.
+    """
     _open_member(signed_on, "10001")
-    assert evaluate(signed_on, TextPresent(frame=MAIN, text="MEMBER RECORD")).ok
-    assert evaluate(signed_on, TextPresent(frame=MAIN, text="Ada Wexler")).ok
+    assert wait_until(signed_on, TextPresent(frame=MAIN, text="MEMBER RECORD"), 5000).ok
+    assert wait_until(signed_on, TextPresent(frame=MAIN, text="Ada Wexler"), 5000).ok
 
 
 def test_select_and_fill_on_the_subaccount_form(
@@ -309,7 +317,9 @@ def test_select_and_fill_on_the_subaccount_form(
             strategies=[RoleNameStrategy(role="button", name="Submit Request")],
         )
     )
-    assert evaluate(signed_on, TextPresent(frame=MAIN, text="REQUEST CONFIRMED")).ok
+    assert wait_until(
+        signed_on, TextPresent(frame=MAIN, text="REQUEST CONFIRMED"), 5000
+    ).ok
 
 
 # -- assertions -------------------------------------------------------------

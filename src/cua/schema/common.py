@@ -142,6 +142,10 @@ irreversible
 """
 
 
+RISK_ORDER: dict[Risk, int] = {"safe": 0, "reversible_write": 1, "irreversible": 2}
+"""Severity ordering for risk classes, least to most dangerous."""
+
+
 Sensitivity = Literal["public", "internal", "restricted"]
 """Data classification, used to drive redaction (brief 3.4).
 

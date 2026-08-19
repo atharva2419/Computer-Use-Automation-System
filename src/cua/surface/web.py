@@ -101,10 +101,23 @@ class PlaywrightWebSurface:
         return self._page
 
     def close(self) -> None:
-        for closer in (self._browser, self._pw):
+        """Tear down the browser and the Playwright driver.
+
+        The driver needs ``stop()``, not ``close()``. Getting that wrong leaks
+        the event loop that ``sync_playwright().start()`` created, and the next
+        surface in the same thread fails with "Sync API inside the asyncio
+        loop" -- a confusing error a long way from its cause. Each half is
+        guarded separately so a failure in one still releases the other.
+        """
+        if self._browser is not None:
             try:
-                closer.close() if closer else None
+                self._browser.close()
             except Exception:  # noqa: BLE001 - teardown must not mask real errors
+                pass
+        if self._pw is not None:
+            try:
+                self._pw.stop()
+            except Exception:  # noqa: BLE001
                 pass
         self._page = self._browser = self._pw = None
 
@@ -142,7 +155,23 @@ class PlaywrightWebSurface:
 
     # -- frames -----------------------------------------------------------
 
-    def _frame(self, ref: FrameRef | None, timeout_ms: int = 5000) -> Frame:
+    def _frame(self, ref: FrameRef | None, timeout_ms: int = 0) -> Frame:
+        """Find a frame. Does *not* wait by default -- deliberately.
+
+        Every caller that needs a frame is already inside a polling loop: the
+        engine races checkpoints against signals, and ``resolve`` retries its
+        ranked strategies against a deadline. A blocking wait in here would be
+        a second, nested retry, and the costs multiply.
+
+        Concretely: the sign-on page has no ``main`` frame, and this
+        capability declares five signals that watch it. With a 5s wait per
+        lookup, one signal sweep cost 25 seconds -- the whole replay took 90s
+        instead of 4s and the timing looked like a hang. Non-blocking lookup
+        plus one outer loop is both faster and easier to reason about.
+
+        ``navigate`` passes an explicit timeout, because there a frame genuinely
+        must exist before the call can mean anything.
+        """
         ref = ref or FrameRef()
         deadline = time.monotonic() + timeout_ms / 1000
 
@@ -187,11 +216,23 @@ class PlaywrightWebSurface:
         return self._live_url(self._frame(frame))
 
     def frame_text(self, frame: FrameRef) -> str:
+        """Visible text of one frame, or '' if it has none.
+
+        The presence check before the read is not a micro-optimisation. A
+        ``<frameset>`` document has no ``<body>`` at all, so reading one waits
+        out the full locator timeout and returns nothing. Signals are evaluated
+        on every poll of every step, so a single assertion that happens to
+        watch the top document was adding two seconds *per step* -- invisible
+        as a bug, obvious as a 2s-per-step tax. ``count()`` answers immediately
+        and the polling loop supplies the retry.
+        """
         target = self._frame(frame)
         try:
-            return target.locator("body").inner_text(timeout=2000)
+            body = target.locator("body")
+            if body.count() == 0:
+                return ""
+            return body.first.inner_text(timeout=2000)
         except (PWTimeout, PWError):
-            # Frameset documents have no body.
             return ""
 
     # -- perception -------------------------------------------------------
@@ -396,7 +437,7 @@ class PlaywrightWebSurface:
             if ref.kind == "top":
                 self.page.goto(url, wait_until="load")
             else:
-                self._frame(ref).goto(url, wait_until="load")
+                self._frame(ref, timeout_ms=5000).goto(url, wait_until="load")
         except PWTimeout as exc:
             raise SurfaceTimeout(f"navigation to {url} timed out") from exc
         self.settle()

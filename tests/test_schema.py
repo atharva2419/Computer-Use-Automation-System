@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -40,8 +41,11 @@ def _target(name: str = "Go") -> Target:
     )
 
 
-def _minimal(**overrides) -> Capability:
-    base = dict(
+def _minimal(**overrides: Any) -> Capability:
+    # Annotated dict[str, Any]: this is a kwargs builder, so its values are
+    # heterogeneous by construction and a narrower inferred type only fights
+    # the splat below.
+    base: dict[str, Any] = dict(
         id="t.cap",
         name="t",
         description="d",
