@@ -168,6 +168,27 @@ ReadSource = Literal["text", "value", "attribute"]
 
 
 @runtime_checkable
+class ActivityRecorder(Protocol):
+    """Optional capability: log what happened on the surface unprompted.
+
+    Deliberately *not* part of ``Surface``. The core protocol is the set of
+    things every surface must do, and a surface that cannot observe activity
+    it did not cause should still be usable. Callers check for this at runtime
+    and degrade to a free-text note when it is absent.
+
+    Its purpose is the human handoff (brief 3.6, "record what the human did").
+    While an operator holds the session the automation is issuing no commands,
+    so the only way to know what they did is to watch. A navigation trail is a
+    modest but honest record -- it is what actually happened, rather than what
+    someone typed into a summary box afterwards.
+    """
+
+    def start_activity_log(self) -> None: ...
+
+    def stop_activity_log(self) -> list[str]: ...
+
+
+@runtime_checkable
 class Surface(Protocol):
     """Perceive and act on one application surface.
 

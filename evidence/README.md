@@ -34,10 +34,62 @@ does not assume a browser.
 | `replay-recovered-interstitial` | `success` | A maintenance interstitial was dismissed mid-run and the step retried; the recovery is recorded but the run still ends in success |
 | `replay-failure-app-error` | `failed` `app_error` | A fault page stops the run, with a screenshot and snapshot of the screen it died on |
 | `replay-failure-invalid-input` | `failed` `invalid_input` | A malformed argument is rejected before the browser opens — note `steps: []` |
+| `replay-human-handoff` | `success` | The session expired mid-run, a human took over the *same* live session, fixed it, handed back, and the run completed |
 
 The three failure-ish rows are deliberately three *different* classifications.
 Separating "the answer is no", "the app is broken", and "the caller asked
 wrongly" is the distinction the whole result contract exists to make.
+
+## Reading the handoff run
+
+`replay-human-handoff` is the one worth reading line by line. Its `run.jsonl`
+shows the shape of an interrupted-then-resumed run:
+
+```
+step 0..5              agent runs normally
+intervention_requested step=run_search   <- session expired
+step 4..7              re-run after the human handed back
+run_finished           success
+```
+
+The run winds back to step 4 rather than retrying step 6, because
+re-authenticating lands the console on its home screen — the control step 6
+wanted no longer exists. The operator, who can see the live session, names the
+resume point.
+
+`control-ledger.json` records the transfer itself:
+
+```
+none -> agent    replay meridian.member.read_savings_balance
+agent -> human   the servicing session expired mid-flow ...
+human -> agent   operator handed control back
+```
+
+And `result.json` carries `human_actions` — captured by watching the live
+session's navigations, not typed in afterwards:
+
+```
+navigated top  -> /login
+navigated top  -> /console
+navigated nav  -> /frame/nav
+navigated main -> /frame/home
+```
+
+**What is scripted here.** The operator's *decision* ("resume from
+`open_member_search`") comes from a `ScriptedOperator` so the run is
+reproducible without a person sitting at a terminal. Everything else is real:
+the session genuinely expires, the control token genuinely moves, the
+re-authentication happens in the same live browser, and the trail is observed
+rather than declared. To do it by hand instead:
+
+```bash
+python scripts/replay.py artifacts/meridian.member.read_savings_balance@v1.json \
+    --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass \
+    --operator --evidence manual-handoff
+```
+
+That opens a real browser, and when the run stops it hands you the window and
+waits at a prompt for `resume`, `resume <step_id>`, or `abort`.
 
 ## Reproducing them
 

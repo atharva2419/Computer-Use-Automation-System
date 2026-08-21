@@ -9,6 +9,7 @@ Usage:
         --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass
 
     ... --headed          watch it run
+    ... --operator        take over the live session when it gets stuck
     ... --json            machine-readable result on stdout
 """
 
@@ -20,6 +21,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from cua.escalation import ConsoleOperatorHandler
 from cua.evidence import FileEvidenceSink
 from cua.guardrails import PolicyGate
 from cua.replay import ReplayEngine
@@ -117,24 +119,45 @@ def main() -> int:
         metavar="LABEL",
         help="write a run trail to evidence/runs/<timestamp>-<label>/",
     )
+    parser.add_argument(
+        "--operator",
+        action="store_true",
+        help="hand the live session to you when the run gets stuck "
+             "(implies --headed)",
+    )
     args = parser.parse_args()
 
     capability = Capability.model_validate_json(args.artifact.read_text("utf-8"))
     supplied = parse_params(args.param)
 
     gate = PolicyGate.from_file()
+    redactor = gate.policy.redactor()
+
     sink = None
     if args.evidence:
         sink = FileEvidenceSink(label=args.evidence)
         directory = sink.open(capability, run_kind="replay")
         print(f"{DIM}evidence -> {directory}{RESET}")
 
+    escalation = None
+    if args.operator:
+        # A human cannot take over a window that does not exist, so asking for
+        # an operator forces a headed browser rather than failing later.
+        args.headed = True
+        escalation = ConsoleOperatorHandler(sink=sink, redactor=redactor)
+
     surface = PlaywrightWebSurface(
         headless=not args.headed, slow_mo_ms=args.slow
     ).start()
     session = Session(surface=surface)
     try:
-        result = ReplayEngine(session, gate=gate, sink=sink).run(capability, supplied)
+        result = ReplayEngine(
+            session,
+            gate=gate,
+            sink=sink,
+            redactor=redactor,
+            escalation=escalation,
+        ).run(capability, supplied)
     finally:
         session.release()
         surface.close()

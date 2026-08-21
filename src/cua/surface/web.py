@@ -79,6 +79,8 @@ class PlaywrightWebSurface:
         self._browser: Browser | None = None
         self._page: Page | None = None
         self._headless = headless
+        self._activity: list[str] | None = None
+        self._nav_listener: Any = None
         self._slow_mo = slow_mo_ms
         self._viewport = viewport
 
@@ -153,6 +155,50 @@ class PlaywrightWebSurface:
             except (PWTimeout, PWError):
                 # Frame detached mid-wait, or never settles. Neither is fatal.
                 continue
+
+    @property
+    def headless(self) -> bool:
+        """Whether there is a window a human could actually take over.
+
+        A handoff to an operator is meaningless on a headless browser, so the
+        escalation path checks this up front rather than pausing forever in
+        front of an invisible session.
+        """
+        return self._headless
+
+    # -- activity recording (optional capability) --------------------------
+
+    def start_activity_log(self) -> None:
+        """Begin recording navigations this surface did not initiate.
+
+        Used across a human handoff. Playwright reports frame navigations
+        regardless of who caused them, so an operator clicking through the
+        console leaves a trail without any cooperation from them.
+        """
+        self._activity = []
+
+        def _on_navigated(frame: Frame) -> None:
+            if self._activity is None:
+                return
+            label = frame.name or "top"
+            entry = f"navigated {label} -> {frame.url}"
+            # Frameset children re-report the same URL on load; keep the trail
+            # readable rather than exhaustive.
+            if not self._activity or self._activity[-1] != entry:
+                self._activity.append(entry)
+
+        self._nav_listener = _on_navigated
+        self.page.on("framenavigated", _on_navigated)
+
+    def stop_activity_log(self) -> list[str]:
+        if self._nav_listener is not None:
+            try:
+                self.page.remove_listener("framenavigated", self._nav_listener)
+            except Exception:  # noqa: BLE001 - page may already be gone
+                pass
+            self._nav_listener = None
+        recorded, self._activity = self._activity or [], None
+        return recorded
 
     # -- frames -----------------------------------------------------------
 
