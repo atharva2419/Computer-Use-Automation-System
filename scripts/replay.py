@@ -20,6 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from cua.evidence import FileEvidenceSink
+from cua.guardrails import PolicyGate
 from cua.replay import ReplayEngine
 from cua.schema.capability import Capability
 from cua.session import Session
@@ -107,17 +109,32 @@ def main() -> int:
     parser.add_argument("--headed", action="store_true")
     parser.add_argument("--slow", type=int, default=0)
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument(
+        "--evidence",
+        nargs="?",
+        const="replay",
+        default=None,
+        metavar="LABEL",
+        help="write a run trail to evidence/runs/<timestamp>-<label>/",
+    )
     args = parser.parse_args()
 
     capability = Capability.model_validate_json(args.artifact.read_text("utf-8"))
     supplied = parse_params(args.param)
+
+    gate = PolicyGate.from_file()
+    sink = None
+    if args.evidence:
+        sink = FileEvidenceSink(label=args.evidence)
+        directory = sink.open(capability, run_kind="replay")
+        print(f"{DIM}evidence -> {directory}{RESET}")
 
     surface = PlaywrightWebSurface(
         headless=not args.headed, slow_mo_ms=args.slow
     ).start()
     session = Session(surface=surface)
     try:
-        result = ReplayEngine(session).run(capability, supplied)
+        result = ReplayEngine(session, gate=gate, sink=sink).run(capability, supplied)
     finally:
         session.release()
         surface.close()

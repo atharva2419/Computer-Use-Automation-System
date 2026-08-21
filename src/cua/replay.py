@@ -137,11 +137,26 @@ class NoOperatorAvailable:
 
 
 class EvidenceSink(Protocol):
+    """Where the run trail goes. Implemented for files in ``cua.evidence``.
+
+    Everything handed to a sink has already been redacted by the engine, so a
+    sink only writes what it is given. Keeping the policy on this side means a
+    future sink -- a database, a log shipper -- cannot forget to apply it.
+    """
+
     def on_step(self, run_id: str, record: StepRecord) -> None: ...
 
     def on_failure(
-        self, run_id: str, detail: FailureDetail, screenshot: bytes
+        self,
+        run_id: str,
+        detail: FailureDetail,
+        screenshot: bytes,
+        observation: str = "",
     ) -> list[str]: ...
+
+    def on_result(
+        self, run_id: str, result: Any, capability: Capability
+    ) -> None: ...
 
 
 class NullSink:
@@ -149,9 +164,16 @@ class NullSink:
         return None
 
     def on_failure(
-        self, run_id: str, detail: FailureDetail, screenshot: bytes
+        self,
+        run_id: str,
+        detail: FailureDetail,
+        screenshot: bytes,
+        observation: str = "",
     ) -> list[str]:
         return []
+
+    def on_result(self, run_id: str, result: Any, capability: Capability) -> None:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +252,19 @@ class ReplayEngine:
     # -- public ------------------------------------------------------------
 
     def run(self, capability: Capability, supplied: dict[str, Any]) -> ReplayResult:
+        """Execute a capability and record the run.
+
+        A thin wrapper around ``_execute`` purely so that every exit -- success,
+        business outcome, failure, or an exception nobody predicted -- passes
+        through one place that hands the result to the evidence sink. Recording
+        at each return site would eventually miss one, and the run that goes
+        unrecorded is invariably the interesting one.
+        """
+        result = self._execute(capability, supplied)
+        self.sink.on_result(self.run_id, result, capability)
+        return result
+
+    def _execute(self, capability: Capability, supplied: dict[str, Any]) -> ReplayResult:
         self._started = datetime.now(timezone.utc)
         self._deadline = time.monotonic() + self.max_duration_ms / 1000
 
@@ -802,11 +837,29 @@ class ReplayEngine:
         detail.expected = self.redactor.text(detail.expected)
         detail.observed = self.redactor.text(detail.observed)
 
-        try:
-            shot = self.session.surface.screenshot()
-        except Exception:  # noqa: BLE001 - evidence capture must never mask the fault
-            shot = b""
-        detail.evidence = self.sink.on_failure(self.run_id, detail, shot)
+        # Both captures are best-effort and separately guarded: evidence
+        # collection must never replace the fault it is documenting.
+        #
+        # Nothing visual is captured when the run never reached the
+        # application -- a rejected argument or a denied first step leaves the
+        # browser on about:blank, and a folder of blank screenshots teaches a
+        # reader to ignore screenshots.
+        shot, observation = b"", ""
+        if self._touched_the_app:
+            try:
+                shot = self.session.surface.screenshot()
+            except Exception:  # noqa: BLE001
+                shot = b""
+            try:
+                observation = self.redactor.text(
+                    self.session.surface.observe().render()
+                )
+            except Exception:  # noqa: BLE001
+                observation = ""
+
+        detail.evidence = self.sink.on_failure(
+            self.run_id, detail, shot, observation
+        )
         return ReplayFailure(**self._envelope(capability), error=detail)
 
     def _record_step(
@@ -839,6 +892,19 @@ class ReplayEngine:
     def _surface(self):
         self.session.require(Actor.AGENT)
         return self.session.surface
+
+    @property
+    def _touched_the_app(self) -> bool:
+        """Whether the run ever reached a real page.
+
+        Distinguishes faults the application produced from faults we produced
+        before contacting it -- an invalid argument, a policy denial at step
+        zero. Visual evidence is only meaningful for the former.
+        """
+        if self._steps:
+            return True
+        url = self._current_url()
+        return bool(url) and not url.startswith(("about:", "chrome:", "data:"))
 
     def _current_url(self) -> str:
         try:

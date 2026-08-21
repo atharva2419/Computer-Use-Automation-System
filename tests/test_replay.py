@@ -400,6 +400,78 @@ def test_rewinding_across_an_irreversible_step_is_refused(
 
 
 # ---------------------------------------------------------------------------
+# Evidence, end to end (brief 3.5)
+# ---------------------------------------------------------------------------
+
+
+def test_a_run_leaves_a_reconstructable_trail(
+    harness: Harness, capability: Capability, tmp_path: Path
+) -> None:
+    from cua.evidence import FileEvidenceSink
+
+    sink = FileEvidenceSink(root=tmp_path, label="e2e")
+    directory = sink.open(capability)
+
+    result = harness.run(capability, {"member_id": "10001", **CREDS}, sink=sink)
+    assert result.status == "success", getattr(result, "error", None)
+
+    events = [
+        json.loads(line)
+        for line in (directory / "run.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    kinds = [e["kind"] for e in events]
+    assert kinds[0] == "run_started" and kinds[-1] == "run_finished"
+
+    logged = [e["step_id"] for e in events if e["kind"] == "step"]
+    assert logged == [s.id for s in capability.steps]
+    assert (directory / "result.json").exists()
+
+
+def test_a_failed_run_captures_the_screen_it_failed_on(
+    harness: Harness, capability: Capability, tmp_path: Path
+) -> None:
+    from cua.evidence import FileEvidenceSink
+
+    sink = FileEvidenceSink(root=tmp_path, label="e2e-fail")
+    directory = sink.open(capability)
+
+    result = harness.run(
+        capability,
+        {"member_id": "10001", **CREDS},
+        sink=_ArmingSink(sink, "submit_signon", server_error=1),
+    )
+
+    assert result.status == "failed"
+    assert (directory / "failure.png").stat().st_size > 0
+    observation = (directory / "observation.txt").read_text(encoding="utf-8")
+    assert "APPLICATION ERROR" in observation, "must capture the screen it died on"
+    assert result.error.evidence, "the result must point at its own artefacts"
+
+
+class _ArmingSink:
+    """A FileEvidenceSink that also injects a fault after a named step."""
+
+    def __init__(self, inner: Any, step_id: str, **flags: Any) -> None:
+        self.inner = inner
+        self.step_id = step_id
+        self.flags = flags
+        self.fired = False
+
+    def on_step(self, run_id: str, record: StepRecord) -> None:
+        self.inner.on_step(run_id, record)
+        if record.step_id == self.step_id and not self.fired:
+            self.fired = True
+            for key, value in self.flags.items():
+                setattr(target_module.chaos, key, value)
+
+    def on_failure(self, run_id, detail, screenshot, observation="") -> list[str]:
+        return self.inner.on_failure(run_id, detail, screenshot, observation)
+
+    def on_result(self, run_id, result, capability) -> None:
+        self.inner.on_result(run_id, result, capability)
+
+
+# ---------------------------------------------------------------------------
 # Guardrails, end to end (brief 3.4)
 # ---------------------------------------------------------------------------
 

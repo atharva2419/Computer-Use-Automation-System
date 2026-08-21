@@ -1,0 +1,11 @@
+SURFACE URL: http://127.0.0.1:5057/login
+
+--- FRAME name='(top)' url=http://127.0.0.1:5057/login title='Application Error' ---
+- table:
+  - rowgroup:
+    - row "APPLICATION ERROR":
+      - cell "APPLICATION ERROR"
+- table:
+  - rowgroup:
+    - row "MCX-5000 — the servicing subsystem returned an unexpected fault. Contact the service desk with this reference.":
+      - cell "MCX-5000 — the servicing subsystem returned an unexpected fault. Contact the service desk with this reference."

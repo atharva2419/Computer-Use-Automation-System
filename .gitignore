@@ -5,5 +5,7 @@ venv/
 .env
 *.egg-info/
 .pytest_cache/
-evidence/runs/
+# NOTE: evidence/ is deliberately *not* ignored -- brief section 6 asks for
+# committed run evidence. Scratch runs can be deleted; kept ones are part
+# of the deliverable.
 node_modules/
