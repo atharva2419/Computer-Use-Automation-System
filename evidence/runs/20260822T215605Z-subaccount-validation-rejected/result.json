@@ -1,0 +1,208 @@
+{
+  "run_id": "3294e6b93c42",
+  "capability_id": "meridian.member.open_subaccount",
+  "capability_version": 1,
+  "started_at": "2026-08-22T21:56:06.628931Z",
+  "finished_at": "2026-08-22T21:56:11.579727Z",
+  "duration_ms": 4950,
+  "steps": [
+    {
+      "step_id": "open_signon",
+      "index": 0,
+      "intent": "Open the servicing console sign-on page.",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 1094,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Type the operator sign-on id.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 593,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_passphrase",
+      "index": 2,
+      "intent": "Type the operator passphrase.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 594,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "submit_signon",
+      "index": 3,
+      "intent": "Submit the sign-on form.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_member_search",
+      "index": 4,
+      "intent": "Open Member Search from the function menu.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "text",
+      "strategy_rank": 0,
+      "duration_ms": 92,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_id",
+      "index": 5,
+      "intent": "Type the member ID being serviced.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 46,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "run_search",
+      "index": 6,
+      "intent": "Run the member search.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 578,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_record",
+      "index": 7,
+      "intent": "Open the member record from the results row.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 94,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_subaccount_form",
+      "index": 8,
+      "intent": "Open the sub-account request form for this member.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 593,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "choose_product_type",
+      "index": 9,
+      "intent": "Select the product type for the new sub-account.",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 46,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_opening_deposit",
+      "index": 10,
+      "intent": "Type the opening deposit amount.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 31,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_nickname",
+      "index": 11,
+      "intent": "Type the member-facing nickname for the account.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 46,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "submit_subaccount",
+      "index": 12,
+      "intent": "Submit the sub-account request, creating the account.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 500,
+      "checkpoint_ok": true,
+      "note": "business outcome VALIDATION_REJECTED"
+    }
+  ],
+  "recoveries": [],
+  "escalations": [
+    {
+      "request_id": "29ca512a8b",
+      "step_id": "submit_subaccount",
+      "reason": "irreversible action on 'Submit Request' requires operator approval",
+      "opened_at": "2026-08-22T21:56:11.070506Z",
+      "resolved_at": "2026-08-22T21:56:11.281177Z",
+      "resolution": "resumed",
+      "operator": "supervisor (scripted)",
+      "human_actions": []
+    }
+  ],
+  "control_ledger": [
+    {
+      "at": "2026-08-22T21:56:06.628932Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.open_subaccount"
+    },
+    {
+      "at": "2026-08-22T21:56:11.105427Z",
+      "from_actor": "agent",
+      "to_actor": "human",
+      "reason": "irreversible action on 'Submit Request' requires operator approval"
+    },
+    {
+      "at": "2026-08-22T21:56:11.281178Z",
+      "from_actor": "human",
+      "to_actor": "agent",
+      "reason": "operator handed control back"
+    }
+  ],
+  "human_touched": true,
+  "evidence_dir": null,
+  "status": "business_outcome",
+  "code": "VALIDATION_REJECTED",
+  "message": "The console rejected the request, typically because the opening deposit is below the product minimum. A business outcome, not a failure: the automation worked and the institution said no, which is an answer the caller must be able to act on. Nothing was created.",
+  "signal_id": "deposit_below_minimum",
+  "outputs": {},
+  "outputs_written": false,
+  "output_names": []
+}

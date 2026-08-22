@@ -1,10 +1,10 @@
 {
-  "run_id": "af51e1437788",
+  "run_id": "98419edd542b",
   "capability_id": "meridian.member.read_savings_balance",
   "capability_version": 1,
-  "started_at": "2026-08-21T00:21:39.351000Z",
-  "finished_at": "2026-08-21T00:21:43.089909Z",
-  "duration_ms": 3738,
+  "started_at": "2026-08-22T21:55:30.906359Z",
+  "finished_at": "2026-08-22T21:55:34.486111Z",
+  "duration_ms": 3579,
   "steps": [
     {
       "step_id": "open_signon",
@@ -14,7 +14,7 @@
       "status": "ok",
       "resolved_by": null,
       "strategy_rank": null,
-      "duration_ms": 1125,
+      "duration_ms": 1093,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -26,7 +26,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 594,
+      "duration_ms": 578,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -38,7 +38,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 594,
+      "duration_ms": 578,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -50,7 +50,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 608,
+      "duration_ms": 625,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -62,7 +62,7 @@
       "status": "ok",
       "resolved_by": "text",
       "strategy_rank": 0,
-      "duration_ms": 109,
+      "duration_ms": 93,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -74,7 +74,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 47,
+      "duration_ms": 31,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -86,30 +86,27 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 593,
+      "duration_ms": 578,
       "checkpoint_ok": true,
-      "note": ""
-    },
-    {
-      "step_id": "open_record",
-      "index": 7,
-      "intent": "Open the member record from the results row.",
-      "action_kind": "click",
-      "status": "ok",
-      "resolved_by": "role_name",
-      "strategy_rank": 0,
-      "duration_ms": 62,
-      "checkpoint_ok": true,
-      "note": "business outcome PERMISSION_DENIED"
+      "note": "business outcome MEMBER_NOT_FOUND"
     }
   ],
   "recoveries": [],
   "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-08-22T21:55:30.907359Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.read_savings_balance"
+    }
+  ],
+  "human_touched": false,
   "evidence_dir": null,
   "status": "business_outcome",
-  "code": "PERMISSION_DENIED",
-  "message": "The member record exists but the automation operator is not entitled to view it. A caller may legitimately need to know this, so it is an outcome rather than a failure -- but it also means the answer was not obtained, and the caller must branch on it.",
-  "signal_id": "permission_denied",
+  "code": "MEMBER_NOT_FOUND",
+  "message": "No member matches the supplied member ID.",
+  "signal_id": "member_not_found",
   "outputs": {},
   "outputs_written": false,
   "output_names": []

@@ -1,13 +1,15 @@
 {
-  "run_id": "d96d82a5720d",
+  "run_id": "a8e5856dc711",
   "capability_id": "meridian.member.read_savings_balance",
   "capability_version": 1,
-  "started_at": "2026-08-21T00:21:56.366077Z",
-  "finished_at": "2026-08-21T00:21:56.378097Z",
-  "duration_ms": 12,
+  "started_at": "2026-08-22T21:55:48.558977Z",
+  "finished_at": "2026-08-22T21:55:48.566502Z",
+  "duration_ms": 7,
   "steps": [],
   "recoveries": [],
   "escalations": [],
+  "control_ledger": [],
+  "human_touched": false,
   "evidence_dir": null,
   "status": "failed",
   "error": {
@@ -16,7 +18,7 @@
     "step_index": null,
     "intent": "",
     "expected": "arguments satisfying the declared inputs",
-    "observed": "'member_id' does not match required pattern /^\\d{4,8}$/: 'oops'",
+    "observed": "'member_id' does not match required pattern /^\\d{4,8}$/: 'not-an-id'",
     "signal_id": null,
     "strategies_tried": [],
     "evidence": []

@@ -1,146 +1,136 @@
 # Evidence
 
-Recorded runs of the system against the MERIDIAN CORE target console. Every
-folder here was produced by the shipped code, not written by hand:
+Ten runs against the live console, all produced by one command:
 
-```
-python scripts/replay.py artifacts/meridian.member.read_savings_balance@v1.json \
-    --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass \
-    --evidence replay-success
+```bash
+python scripts/make_evidence.py --clean
 ```
 
-## What is in a run folder
+Every run uses the artifacts and the guardrail policy exactly as they ship.
+Faults are injected through the target app's out-of-band control at a named
+step — never by weakening an artifact or relaxing the policy.
 
-| File | Contents |
-|---|---|
-| `run.jsonl` | Ordered event trail: run header, one line per step, failures, close |
-| `result.json` | The typed result the caller received |
-| `failure.png` | Screenshot at the moment of failure (failed runs only) |
-| `observation.txt` | Accessibility snapshot of every frame at that moment (failed runs only) |
+## What to read first
 
-The richer failure signal is a screenshot **plus an accessibility snapshot**
-rather than a DOM dump. The accessibility tree is the representation the
-automation itself reasons about, so a reviewer sees what the engine saw; and
-unlike a DOM it is producible on a desktop surface too, so the evidence format
-does not assume a browser.
+If you only open one folder, open **`subaccount-approved-by-operator`**. It is
+the whole system in one run: twelve steps executed unattended, a hard stop at
+the one action that creates a record, a human approval, the run completing, and
+an audit trail of who held the session.
+
+Its `result.json` contains:
+
+```json
+"control_ledger": [
+  { "from_actor": "none",  "to_actor": "agent", "reason": "replay meridian.member.open_subaccount" },
+  { "from_actor": "agent", "to_actor": "human", "reason": "irreversible action on 'Submit Request' requires operator approval" },
+  { "from_actor": "human", "to_actor": "agent", "reason": "operator handed control back" }
+],
+"human_touched": true
+```
+
+Then open **`subaccount-blocked-no-operator`**: the identical run with nobody
+available to approve. It stops at step 12 with `escalation_unresolved`. The
+account is not created. That pair is the safety model working in both
+directions.
 
 ## The runs
 
-| Folder | Result | What it demonstrates |
+### The read capability — `meridian.member.read_savings_balance`
+
+| Folder | Result | Shows |
 |---|---|---|
-| `replay-success` | `success` | The full flow with typed outputs extracted |
-| `replay-business-not-found` | `business_outcome` `MEMBER_NOT_FOUND` | An unknown member is a legitimate answer, not a crash |
-| `replay-business-permission-denied` | `business_outcome` `PERMISSION_DENIED` | The record exists but is not viewable — a *different* answer from not-found |
-| `replay-recovered-interstitial` | `success` | A maintenance interstitial was dismissed mid-run and the step retried; the recovery is recorded but the run still ends in success |
-| `replay-failure-app-error` | `failed` `app_error` | A fault page stops the run, with a screenshot and snapshot of the screen it died on |
-| `replay-failure-invalid-input` | `failed` `invalid_input` | A malformed argument is rejected before the browser opens — note `steps: []` |
-| `replay-human-handoff` | `success` | The session expired mid-run, a human took over the *same* live session, fixed it, handed back, and the run completed |
+| `replay-success` | `success` | Eight steps, three typed outputs, no model involved |
+| `replay-business-not-found` | `business_outcome` `MEMBER_NOT_FOUND` | A legitimate negative answer, stopping at step 6 |
+| `replay-business-permission-denied` | `business_outcome` `PERMISSION_DENIED` | Stops at step 7 with a *different* code — the record exists, the operator is not entitled |
+| `replay-recovered-interstitial` | `success` | A maintenance interstitial dismissed mid-run; see `recoveries[]` |
+| `replay-failure-app-error` | `failed` `app_error` | A fault page, with screenshot and accessibility snapshot |
+| `replay-failure-invalid-input` | `failed` `invalid_input` | `steps: []` — rejected before the browser opened |
+| `replay-human-handoff` | `success` | Session expires mid-flow, operator re-authenticates, run resumes |
 
-The three failure-ish rows are deliberately three *different* classifications.
-Separating "the answer is no", "the app is broken", and "the caller asked
-wrongly" is the distinction the whole result contract exists to make.
+### The write capability — `meridian.member.open_subaccount`
 
-## Reading the handoff run
+| Folder | Result | Shows |
+|---|---|---|
+| `subaccount-approved-by-operator` | `success` | Irreversible step approved by a human; account created |
+| `subaccount-blocked-no-operator` | `failed` `escalation_unresolved` | Same run, no operator: fails closed |
+| `subaccount-validation-rejected` | `business_outcome` `VALIDATION_REJECTED` | Deposit below the product minimum — the institution said no, and nothing was created |
 
-`replay-human-handoff` is the one worth reading line by line. Its `run.jsonl`
-shows the shape of an interrupted-then-resumed run:
+The three sub-account runs are deliberately the same flow with one variable
+changed each time. Together they separate *the automation broke*, *nobody was
+available to authorise it*, and *the institution declined* — three outcomes
+that a system conflating them would report identically.
 
+## What is in each folder
+
+| File | Contents |
+|---|---|
+| `run.jsonl` | One line per event, in order: run header, every step, fault injections, interventions, result |
+| `result.json` | The typed result the caller received, plus the control ledger |
+| `intervention-N.json` | The briefing raised to the operator, where one was |
+| `failure.png` | Screenshot at the moment of failure |
+| `observation.txt` | Accessibility snapshot of every frame at that moment |
+
+Two things to look for in `run.jsonl`:
+
+- **`resolved_by` and `strategy_rank` on every step.** `rank 0` means the
+  preferred locator strategy matched. A run that starts reporting `rank 1` has
+  not failed, but the UI has moved underneath it — the cheapest drift signal
+  the system has.
+- **The mix of strategies.** `label_cell` for inputs that have no accessible
+  name, `role_name` for buttons, `text` for the non-semantic `<td onclick>`
+  menu. That mix is the hostile-markup problem, visible as data.
+
+## On redaction
+
+`result.json` masks outputs by their declared sensitivity:
+
+```json
+"outputs": {
+  "new_account_number": "[REDACTED:restricted str]",
+  "product_type": "Holiday",
+  "opening_deposit": "[REDACTED:restricted float]"
+}
 ```
-step 0..5              agent runs normally
-intervention_requested step=run_search   <- session expired
-step 4..7              re-run after the human handed back
-run_finished           success
-```
 
-The run winds back to step 4 rather than retrying step 6, because
-re-authenticating lands the console on its home screen — the control step 6
-wanted no longer exists. The operator, who can see the live session, names the
-resume point.
+The caller received the real values in memory; the evidence folder records that
+they existed, their type, and their names. `product_type` is classified
+`internal` and passes through, which is the point — the rule is driven by the
+schema, not by blanket masking.
 
-`control-ledger.json` records the transfer itself:
+The known gap, stated rather than solved: **screenshots are pixels and nothing
+redacts pixels.** `failure.png` for a member record contains that member's
+data. Production would crop to the failing region or hold screenshots in a
+store with tighter retention.
 
-```
-none -> agent    replay meridian.member.read_savings_balance
-agent -> human   the servicing session expired mid-flow ...
-human -> agent   operator handed control back
-```
+## Doing the handoff yourself
 
-And `result.json` carries `human_actions` — captured by watching the live
-session's navigations, not typed in afterwards:
-
-```
-navigated top  -> /login
-navigated top  -> /console
-navigated nav  -> /frame/nav
-navigated main -> /frame/home
-```
-
-**What is scripted here.** The operator's *decision* ("resume from
-`open_member_search`") comes from a `ScriptedOperator` so the run is
-reproducible without a person sitting at a terminal. Everything else is real:
-the session genuinely expires, the control token genuinely moves, the
-re-authentication happens in the same live browser, and the trail is observed
-rather than declared.
-
-## Doing the handoff by hand
+The `replay-human-handoff` run above uses a scripted stand-in operator so it
+regenerates reproducibly — the control transfer and activity capture are real,
+only the decision is scripted. To be the operator yourself:
 
 ```bash
 python -m target_app.app                 # terminal 1
 
-python scripts/chaos.py expire           # terminal 2 -- arm the session failure
+python scripts/chaos.py expire           # terminal 2
 python scripts/replay.py artifacts/meridian.member.read_savings_balance@v1.json \
     --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass \
     --operator --evidence manual-handoff
 ```
 
-A real browser opens. Sign-on bounces straight back to the sign-on page, the
-run stops, and the terminal prints a briefing listing every step you may
-resume from. The window is now yours: sign on by hand with `op.demo` /
-`demo-pass`, then type
+A real browser opens, sign-on bounces back to the sign-on page, and the run
+stops and hands you the window. Sign on by hand with `op.demo` / `demo-pass`,
+then type `resume` in **the same terminal** — the engine reads the screen you
+left and works out which step to continue from.
+
+Check `escalations[0].human_actions` afterwards. It should list the navigations
+you caused, observed from the live session rather than self-reported:
 
 ```
-resume open_member_search
+navigated top  -> http://127.0.0.1:5057/console
+navigated nav  -> http://127.0.0.1:5057/frame/nav
+navigated main -> http://127.0.0.1:5057/frame/home
 ```
 
-and the run finishes from there. `resume` alone retries the step that stopped,
-and `abort` fails the run.
-
-Note *which* step it stops on. Arming the expiry before the run means the
-session dies during sign-on, so the flow never gets past step 3 and you resume
-from the search step. The committed `replay-human-handoff` run arms it later
-instead, mid-flow, which is the more realistic shape -- and it is why the
-capability declares two signals on the sign-on step: an outright credential
-rejection says *"Sign-on failed"* on the page, whereas an expired session
-silently returns you to the login screen with nothing to read. Only the second
-one is escalated to a human, because only that one is something a person can
-fix.
-
-## Reproducing them
-
-Start the target app, then use `scripts/chaos.py` to arm the runtime
-conditions:
-
-```bash
-python -m target_app.app                 # terminal 1
-
-python scripts/chaos.py notice           # arms the interstitial once
-python scripts/chaos.py error            # arms one fault page
-python scripts/chaos.py reset            # clears faults and restores fixture data
-```
-
-## What is deliberately not here
-
-**Output values.** `result.json` records that `savings_balance` came back and
-that it was a `float`, but not the figure. Declared outputs are returned to the
-caller in memory; an evidence folder is read by people who did not make the
-request, so restricted outputs are described rather than persisted. Outputs
-declared `internal` or `public` are written in full.
-
-**Credentials.** The run header lists which parameters the capability declares
-and which are secret. It never lists what was passed.
-
-**Redacted screenshots.** `failure.png` is pixels, and nothing here redacts
-pixels — a failure screenshot of a member record contains that member's data.
-A real deployment would crop to the failing region, blur by accessibility node,
-or hold screenshots in a store with tighter retention. Called out rather than
-solved.
+An empty list means the browser was never touched — and the handler now says so
+before resuming, because resuming an unchanged session fails at the next step
+for reasons that look like drift and are not.

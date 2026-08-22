@@ -1,10 +1,10 @@
 {
-  "run_id": "f7134133b07c",
+  "run_id": "7194d0f4adf6",
   "capability_id": "meridian.member.read_savings_balance",
   "capability_version": 1,
-  "started_at": "2026-08-21T00:21:44.786540Z",
-  "finished_at": "2026-08-21T00:21:49.313010Z",
-  "duration_ms": 4526,
+  "started_at": "2026-08-22T21:55:39.637046Z",
+  "finished_at": "2026-08-22T21:55:43.984890Z",
+  "duration_ms": 4347,
   "steps": [
     {
       "step_id": "open_signon",
@@ -14,7 +14,7 @@
       "status": "ok",
       "resolved_by": null,
       "strategy_rank": null,
-      "duration_ms": 1108,
+      "duration_ms": 1094,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -26,7 +26,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 594,
+      "duration_ms": 577,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -38,7 +38,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 593,
+      "duration_ms": 562,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -50,7 +50,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 625,
+      "duration_ms": 640,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -62,7 +62,7 @@
       "status": "ok",
       "resolved_by": "text",
       "strategy_rank": 0,
-      "duration_ms": 765,
+      "duration_ms": 703,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -74,7 +74,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 47,
+      "duration_ms": 30,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -86,7 +86,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 625,
+      "duration_ms": 594,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -98,7 +98,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 94,
+      "duration_ms": 92,
       "checkpoint_ok": true,
       "note": ""
     }
@@ -110,10 +110,19 @@
       "action": "dismiss_and_retry",
       "attempt": 1,
       "succeeded": true,
-      "at": "2026-08-21T00:21:48.393394Z"
+      "at": "2026-08-22T21:55:43.141317Z"
     }
   ],
   "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-08-22T21:55:39.637047Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.read_savings_balance"
+    }
+  ],
+  "human_touched": false,
   "evidence_dir": null,
   "status": "success",
   "outputs": {

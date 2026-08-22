@@ -1,0 +1,52 @@
+SURFACE URL: http://127.0.0.1:5057/console
+
+--- FRAME name='(top)' url=http://127.0.0.1:5057/console title='MERIDIAN CORE :: Console' ---
+- document
+
+--- FRAME name='nav' url=http://127.0.0.1:5057/frame/nav title='nav' ---
+- table:
+  - rowgroup:
+    - row "FUNCTIONS":
+      - cell "FUNCTIONS"
+- table:
+  - rowgroup:
+    - row "Workspace":
+      - cell "Workspace"
+    - row "Member Search":
+      - cell "Member Search"
+    - row "Transaction Post":
+      - cell "Transaction Post"
+    - row "Reports":
+      - cell "Reports"
+
+--- FRAME name='main' url=http://127.0.0.1:5057/frame/subaccount/10001 title='Open Sub-Account' ---
+- table:
+  - rowgroup:
+    - row "OPEN SUB-ACCOUNT":
+      - cell "OPEN SUB-ACCOUNT"
+- table:
+  - rowgroup:
+    - row "Member 10001 — Ada Wexler":
+      - cell "Member 10001 — Ada Wexler"
+- table:
+  - rowgroup:
+    - row "Product Type Holiday Club":
+      - cell "Product Type"
+      - cell "Holiday Club":
+        - combobox:
+          - option
+          - option "Savings"
+          - option "Checking"
+          - option "Holiday Club" [selected]
+    - row "Opening Deposit 150.00":
+      - cell "Opening Deposit"
+      - cell "150.00":
+        - textbox: "150.00"
+    - row "Nickname Holiday Fund":
+      - cell "Nickname"
+      - cell "Holiday Fund":
+        - textbox: Holiday Fund
+    - row "Submit Request":
+      - cell
+      - cell "Submit Request":
+        - button "Submit Request"

@@ -27,7 +27,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from . import assertions, extract, params
 from .guardrails import GateDecision, GateRequest, PolicyGate
@@ -48,6 +48,7 @@ from .schema.capability import (
     WaitForAction,
 )
 from .schema.result import (
+    ControlTransferRecord,
     EscalationRecord,
     FailureCategory,
     FailureDetail,
@@ -99,6 +100,14 @@ class EscalationContext:
 
     Without this the handler can only offer "retry the step that failed",
     which is the wrong answer whenever recovery moves the app somewhere else.
+    """
+
+    suggest_resume: Callable[[], str | None] | None = None
+    """Ask the engine where the flow now stands, once the human has finished.
+
+    Supplied as a callable rather than a precomputed value because it must be
+    evaluated *after* the operator has acted -- the whole point is to read the
+    state they left behind.
     """
 
 
@@ -645,6 +654,7 @@ class ReplayEngine:
             observed=observed,
             session=self.session,
             step_ids=[s.id for s in capability.steps],
+            suggest_resume=lambda: self.suggest_resume_point(capability),
         )
         outcome = self.escalation.request(context)
 
@@ -681,6 +691,40 @@ class ReplayEngine:
 
         if outcome.resume_from_step is not None:
             self._resume_at(capability, step, index, outcome.resume_from_step)
+
+    def suggest_resume_point(self, capability: Capability) -> str | None:
+        """Work out where the flow now stands, after someone else moved it.
+
+        A person who has just fixed a session by hand should not also have to
+        deduce which step the automation ought to restart from -- but only they
+        can see where the app now is, so the engine has to ask. This narrows
+        that question to a yes.
+
+        Checkpoints already encode "the app is in this state", so the furthest
+        step whose checkpoint currently holds is the last thing effectively
+        done; the flow resumes at the one after it. Evaluated without waiting,
+        because this is a snapshot of a settled screen rather than something to
+        wait for.
+
+        Returns ``None`` when nothing matches, in which case the caller keeps
+        the safe default of retrying the step that stopped.
+        """
+        surface = self.session.surface
+        furthest: int | None = None
+
+        for index, step in enumerate(capability.steps):
+            if step.checkpoint is None:
+                continue
+            try:
+                if assertions.evaluate(surface, step.checkpoint.assertion).ok:
+                    furthest = index
+            except SurfaceError:
+                continue
+
+        if furthest is None:
+            return None
+        nxt = furthest + 1
+        return capability.steps[nxt].id if nxt < len(capability.steps) else None
 
     def _resume_at(
         self, capability: Capability, step: Step, index: int, step_id: str
@@ -814,6 +858,16 @@ class ReplayEngine:
             "steps": list(self._steps),
             "recoveries": list(self._recoveries),
             "escalations": list(self._escalations),
+            "control_ledger": [
+                ControlTransferRecord(
+                    at=datetime.fromtimestamp(t.at, tz=timezone.utc),
+                    from_actor=t.frm.value,
+                    to_actor=t.to.value,
+                    reason=self.redactor.text(t.reason),
+                )
+                for t in self.session.transfers
+            ],
+            "human_touched": self.session.human_touched,
         }
 
     def _terminate_business(

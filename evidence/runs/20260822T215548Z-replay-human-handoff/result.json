@@ -1,10 +1,10 @@
 {
-  "run_id": "1a38601dec5b",
+  "run_id": "9bd298e2ee2c",
   "capability_id": "meridian.member.read_savings_balance",
   "capability_version": 1,
-  "started_at": "2026-08-21T00:21:29.154170Z",
-  "finished_at": "2026-08-21T00:21:32.916098Z",
-  "duration_ms": 3761,
+  "started_at": "2026-08-22T21:55:49.309536Z",
+  "finished_at": "2026-08-22T21:55:55.132743Z",
+  "duration_ms": 5823,
   "steps": [
     {
       "step_id": "open_signon",
@@ -14,7 +14,7 @@
       "status": "ok",
       "resolved_by": null,
       "strategy_rank": null,
-      "duration_ms": 1109,
+      "duration_ms": 1078,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -26,7 +26,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 593,
+      "duration_ms": 594,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -38,7 +38,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 578,
+      "duration_ms": 577,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -50,7 +50,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 609,
+      "duration_ms": 610,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -62,7 +62,7 @@
       "status": "ok",
       "resolved_by": "text",
       "strategy_rank": 0,
-      "duration_ms": 108,
+      "duration_ms": 77,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -74,7 +74,31 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 31,
+      "duration_ms": 46,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_member_search",
+      "index": 4,
+      "intent": "Open Member Search from the function menu.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "text",
+      "strategy_rank": 0,
+      "duration_ms": 93,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_id",
+      "index": 5,
+      "intent": "Type the member ID being looked up.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 47,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -86,7 +110,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 593,
+      "duration_ms": 577,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -98,13 +122,47 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 77,
+      "duration_ms": 78,
       "checkpoint_ok": true,
       "note": ""
     }
   ],
   "recoveries": [],
-  "escalations": [],
+  "escalations": [
+    {
+      "request_id": "765eb6ddbc",
+      "step_id": "run_search",
+      "reason": "The servicing session expired mid-flow. Re-authenticating unattended is deliberately not automated: it would mean the system holds and replays operator credentials outside the invocation that supplied them. A human re-establishes the session and hands control back.",
+      "opened_at": "2026-08-22T21:55:52.907381Z",
+      "resolved_at": "2026-08-22T21:55:54.275723Z",
+      "resolution": "resumed",
+      "operator": "stand-in operator (scripted)",
+      "human_actions": [
+        "navigated main -> http://127.0.0.1:5057/frame/home"
+      ]
+    }
+  ],
+  "control_ledger": [
+    {
+      "at": "2026-08-22T21:55:49.309536Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.read_savings_balance"
+    },
+    {
+      "at": "2026-08-22T21:55:52.942097Z",
+      "from_actor": "agent",
+      "to_actor": "human",
+      "reason": "The servicing session expired mid-flow. Re-authenticating unattended is deliberately not automated: it would mean the system holds and replays operator credentials outside the invocation that supplied them. A human re-establishes the session and hands control back."
+    },
+    {
+      "at": "2026-08-22T21:55:54.275723Z",
+      "from_actor": "human",
+      "to_actor": "agent",
+      "reason": "operator handed control back"
+    }
+  ],
+  "human_touched": true,
   "evidence_dir": null,
   "status": "success",
   "outputs": {

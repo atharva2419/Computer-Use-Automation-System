@@ -353,6 +353,103 @@ def test_a_resume_after_real_work_is_not_flagged() -> None:
     assert outcome.note == ""
 
 
+def test_control_ledger_is_persisted_on_the_result(
+    capability: Capability, gate: PolicyGate
+) -> None:
+    """The transfer is stated in the result, not merely implied by escalations.
+
+    "Who was in control, when, and why" is the question an audit of a
+    part-manual run asks, and it cannot be reconstructed from step records.
+    """
+    surface = PlaywrightWebSurface(headless=True).start()
+    session = Session(surface=surface)
+    try:
+        result = ReplayEngine(
+            session,
+            gate=gate,
+            sink=ArmAfterStep("open_member_search", expire_session=True),
+            escalation=ScriptedOperator(
+                decisions=[
+                    EscalationOutcome(
+                        resolved=True,
+                        resolution="resumed",
+                        operator="supervisor@test",
+                        resume_from_step="open_member_search",
+                    )
+                ],
+                on_takeover=_reauthenticate(capability),
+            ),
+        ).run(capability, {"member_id": "10001", **CREDS})
+    finally:
+        surface.close()
+
+    assert result.status == "success", getattr(result, "error", None)
+    assert result.human_touched is True
+    hops = [(t.from_actor, t.to_actor) for t in result.control_ledger]
+    assert hops == [("none", "agent"), ("agent", "human"), ("human", "agent")]
+    assert all(t.reason for t in result.control_ledger), "each hop says why"
+
+
+def test_a_clean_run_records_no_human_involvement(
+    capability: Capability, gate: PolicyGate
+) -> None:
+    surface = PlaywrightWebSurface(headless=True).start()
+    session = Session(surface=surface)
+    try:
+        result = ReplayEngine(session, gate=gate).run(
+            capability, {"member_id": "10001", **CREDS}
+        )
+    finally:
+        surface.close()
+
+    assert result.status == "success"
+    assert result.human_touched is False
+    assert [t.to_actor for t in result.control_ledger] == ["agent"]
+
+
+def test_resume_point_is_inferred_from_the_screen(
+    capability: Capability, gate: PolicyGate
+) -> None:
+    """The engine reads where the operator left the session.
+
+    Only the human can fix the app; only the engine knows which step that
+    state corresponds to. Making the operator supply a step id put the burden
+    on the wrong party -- so a bare `resume` asks the engine to look.
+    """
+    surface = PlaywrightWebSurface(headless=True).start()
+    session = Session(surface=surface)
+    captured: list[str | None] = []
+
+    class BareResume:
+        """Answers `resume` with no step, as an operator naturally would."""
+
+        def request(self, context: EscalationContext) -> EscalationOutcome:
+            _reauthenticate(capability)(context)
+            assert context.suggest_resume is not None
+            captured.append(context.suggest_resume())
+            return EscalationOutcome(
+                resolved=True,
+                resolution="resumed",
+                operator="supervisor@test",
+                resume_from_step=captured[-1],
+            )
+
+    try:
+        result = ReplayEngine(
+            session,
+            gate=gate,
+            sink=ArmAfterStep("open_member_search", expire_session=True),
+            escalation=BareResume(),
+        ).run(capability, {"member_id": "10001", **CREDS})
+    finally:
+        surface.close()
+
+    # Re-authentication lands on the console, so the furthest satisfied
+    # checkpoint is sign-on and the flow should pick up at the search step.
+    assert captured == ["open_member_search"]
+    assert result.status == "success", getattr(result, "error", None)
+
+
 def test_intervention_briefing_carries_what_an_operator_needs() -> None:
     request = InterventionRequest(
         request_id="r1",

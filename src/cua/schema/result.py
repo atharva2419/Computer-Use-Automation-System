@@ -124,6 +124,21 @@ class FailureDetail(_Strict):
     )
 
 
+class ControlTransferRecord(_Strict):
+    """One movement of the control token during the run (brief 3.6).
+
+    The escalation records imply that control moved; this states it. Together
+    they answer "who was in control, when, and why" without inference -- which
+    is the question an audit of a part-manual run actually asks, and the one
+    thing a reviewer cannot reconstruct from step records alone.
+    """
+
+    at: datetime
+    from_actor: str
+    to_actor: str
+    reason: str
+
+
 class _Envelope(_Strict):
     run_id: str
     capability_id: str
@@ -134,6 +149,13 @@ class _Envelope(_Strict):
     steps: list[StepRecord] = Field(default_factory=list)
     recoveries: list[RecoveryRecord] = Field(default_factory=list)
     escalations: list[EscalationRecord] = Field(default_factory=list)
+    control_ledger: list[ControlTransferRecord] = Field(default_factory=list)
+    human_touched: bool = Field(
+        default=False,
+        description="Whether a person ever held this session. A capability "
+        "that needed manual help is not the same as one that ran clean, even "
+        "when both end in success, and confidence scoring should say so.",
+    )
     evidence_dir: str | None = None
 
 

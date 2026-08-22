@@ -243,7 +243,41 @@ class ConsoleOperatorHandler:
             )
 
         outcome = self._interpret(answer, scope)
+        outcome = self._fill_in_resume_point(outcome, context)
         return self._warn_if_untouched(outcome, scope)
+
+    def _fill_in_resume_point(
+        self, outcome: EscalationOutcome, context: EscalationContext
+    ) -> EscalationOutcome:
+        """Work out where to restart when the operator did not say.
+
+        A bare ``resume`` means "retry the step that stopped", which is the
+        wrong answer precisely when a human has just moved the session
+        somewhere else -- and it is the answer they are most likely to give,
+        because working out the right step id is the engine's job, not theirs.
+
+        So ask the engine to read the screen they left behind. Only the human
+        knows the app has been fixed; only the engine knows which step that
+        state corresponds to. Neither alone is enough.
+        """
+        if not outcome.resolved or outcome.resume_from_step is not None:
+            return outcome
+        if context.suggest_resume is None:
+            return outcome
+
+        try:
+            suggested = context.suggest_resume()
+        except Exception:  # noqa: BLE001 - a bad guess must not fail the handoff
+            suggested = None
+
+        if suggested is None or suggested == context.step.id:
+            return outcome
+
+        print(
+            f"  the session now looks like step {suggested!r}; resuming there\n",
+            file=self.stream,
+        )
+        return replace(outcome, resume_from_step=suggested)
 
     def _warn_if_untouched(
         self, outcome: EscalationOutcome, scope: "_HandoffScope"
@@ -283,7 +317,7 @@ class ConsoleOperatorHandler:
             "  hold it, and typing below hands control straight back.\n"
             "  ---------------------------------------------------------------\n"
             "\n  Then, in this terminal:\n"
-            "    resume            continue from the step that stopped\n"
+            "    resume            continue -- the engine reads where you left it\n"
             "    resume <step_id>  continue from a different step (see the list above)\n"
             "    abort             give up and fail the run\n"
             f"  (timeout {self.timeout_seconds}s)\n"

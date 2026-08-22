@@ -1,10 +1,10 @@
 {
-  "run_id": "5cc90404badc",
+  "run_id": "246144f22017",
   "capability_id": "meridian.member.read_savings_balance",
   "capability_version": 1,
-  "started_at": "2026-08-21T20:04:28.016218Z",
-  "finished_at": "2026-08-21T20:04:33.696422Z",
-  "duration_ms": 5680,
+  "started_at": "2026-08-22T21:55:35.244042Z",
+  "finished_at": "2026-08-22T21:55:38.892732Z",
+  "duration_ms": 3648,
   "steps": [
     {
       "step_id": "open_signon",
@@ -14,7 +14,7 @@
       "status": "ok",
       "resolved_by": null,
       "strategy_rank": null,
-      "duration_ms": 1110,
+      "duration_ms": 1094,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -38,7 +38,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 561,
+      "duration_ms": 577,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -50,7 +50,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 625,
+      "duration_ms": 609,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -62,7 +62,7 @@
       "status": "ok",
       "resolved_by": "text",
       "strategy_rank": 0,
-      "duration_ms": 78,
+      "duration_ms": 93,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -74,31 +74,7 @@
       "status": "ok",
       "resolved_by": "label_cell",
       "strategy_rank": 0,
-      "duration_ms": 47,
-      "checkpoint_ok": true,
-      "note": ""
-    },
-    {
-      "step_id": "open_member_search",
-      "index": 4,
-      "intent": "Open Member Search from the function menu.",
-      "action_kind": "click",
-      "status": "ok",
-      "resolved_by": "text",
-      "strategy_rank": 0,
-      "duration_ms": 110,
-      "checkpoint_ok": true,
-      "note": ""
-    },
-    {
-      "step_id": "enter_member_id",
-      "index": 5,
-      "intent": "Type the member ID being looked up.",
-      "action_kind": "fill",
-      "status": "ok",
-      "resolved_by": "label_cell",
-      "strategy_rank": 0,
-      "duration_ms": 31,
+      "duration_ms": 46,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -110,7 +86,7 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 608,
+      "duration_ms": 594,
       "checkpoint_ok": true,
       "note": ""
     },
@@ -122,40 +98,28 @@
       "status": "ok",
       "resolved_by": "role_name",
       "strategy_rank": 0,
-      "duration_ms": 77,
+      "duration_ms": 46,
       "checkpoint_ok": true,
-      "note": ""
+      "note": "business outcome PERMISSION_DENIED"
     }
   ],
   "recoveries": [],
-  "escalations": [
+  "escalations": [],
+  "control_ledger": [
     {
-      "request_id": "74d10d6c98",
-      "step_id": "run_search",
-      "reason": "The servicing session expired mid-flow. Re-authenticating unattended is deliberately not automated: it would mean the system holds and replays operator credentials outside the invocation that supplied them. A human re-establishes the session and hands control back.",
-      "opened_at": "2026-08-21T20:04:31.633696Z",
-      "resolved_at": "2026-08-21T20:04:32.806940Z",
-      "resolution": "resumed",
-      "operator": "supervisor@meridian.demo",
-      "human_actions": [
-        "navigated top -> http://127.0.0.1:5057/login",
-        "navigated top -> http://127.0.0.1:5057/console",
-        "navigated nav -> http://127.0.0.1:5057/frame/nav",
-        "navigated main -> http://127.0.0.1:5057/frame/home"
-      ]
+      "at": "2026-08-22T21:55:35.244043Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.read_savings_balance"
     }
   ],
+  "human_touched": false,
   "evidence_dir": null,
-  "status": "success",
-  "outputs": {
-    "member_name": "[REDACTED:restricted str]",
-    "savings_balance": "[REDACTED:restricted float]",
-    "savings_account_number": "[REDACTED:restricted str]"
-  },
+  "status": "business_outcome",
+  "code": "PERMISSION_DENIED",
+  "message": "The member record exists but the automation operator is not entitled to view it. A caller may legitimately need to know this, so it is an outcome rather than a failure -- but it also means the answer was not obtained, and the caller must branch on it.",
+  "signal_id": "permission_denied",
+  "outputs": {},
   "outputs_written": false,
-  "output_names": [
-    "member_name",
-    "savings_account_number",
-    "savings_balance"
-  ]
+  "output_names": []
 }
