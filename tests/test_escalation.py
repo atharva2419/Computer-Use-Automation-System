@@ -150,9 +150,14 @@ def test_handoff_scope_returns_control_even_if_the_handler_raises() -> None:
     class Recorder:
         def __init__(self) -> None:
             self.started = self.stopped = False
+            self.polled = 0
 
         def start_activity_log(self) -> None:
             self.started = True
+
+        def poll_activity(self, settle_ms: int = 150) -> list[str]:
+            self.polled += 1
+            return []
 
         def stop_activity_log(self) -> list[str]:
             self.stopped = True
@@ -174,19 +179,56 @@ def test_handoff_scope_returns_control_even_if_the_handler_raises() -> None:
 def test_activity_is_captured_by_watching_not_by_self_report(
     base_url: str,
 ) -> None:
-    """The record of what a human did comes from the live session itself."""
+    """The record of what a human did comes from the live session itself.
+
+    Crucially the navigation here is *not* driven through the Surface API. A
+    real operator types into the browser while the automation sits idle, and
+    an earlier implementation subscribed to Playwright events, which are only
+    dispatched when the caller re-enters the library. It captured nothing from
+    a session the human had demonstrably used, while passing any test that
+    drove the navigation through ``surface.navigate``. So this drives the page
+    directly and only polls in between.
+    """
     surface = PlaywrightWebSurface(headless=True).start()
     try:
         assert isinstance(surface, ActivityRecorder)
         surface.navigate(f"{base_url}/login")
 
         surface.start_activity_log()
-        surface.navigate(f"{base_url}/login")  # stands in for a human click
+
+        # Stands in for the operator: sign on by hand, bypassing the Surface.
+        surface.page.fill("input[name=f1]", "op.demo")
+        surface.page.fill("input[name=f2]", "demo-pass")
+        surface.page.click("input[type=submit]")
+
+        for _ in range(4):
+            surface.poll_activity()
         trail = surface.stop_activity_log()
 
-        assert any("/login" in entry for entry in trail)
+        assert trail, "an operator signing on must leave a trail"
         assert all(entry.startswith("navigated ") for entry in trail)
+        # The frameset children are what prove we sampled the real state.
+        assert any("/console" in entry for entry in trail)
+        assert any(entry.startswith("navigated nav ") for entry in trail)
+        assert any(entry.startswith("navigated main ") for entry in trail)
         assert surface.stop_activity_log() == [], "log resets after collection"
+    finally:
+        surface.close()
+
+
+def test_a_quiet_session_records_no_activity(base_url: str) -> None:
+    """The counterpart: polling an untouched session must stay empty.
+
+    This is what lets the handler warn an operator who resumed without doing
+    anything, so the signal has to be trustworthy in both directions.
+    """
+    surface = PlaywrightWebSurface(headless=True).start()
+    try:
+        surface.navigate(f"{base_url}/login")
+        surface.start_activity_log()
+        for _ in range(4):
+            surface.poll_activity()
+        assert surface.stop_activity_log() == []
     finally:
         surface.close()
 
@@ -273,6 +315,44 @@ def test_operator_answers_are_interpreted(
     assert outcome.actions == ["navigated top -> /login"]
 
 
+def test_resuming_an_untouched_session_is_flagged() -> None:
+    """An operator who resumes without doing anything gets told.
+
+    Observed in a real manual run: the handoff was resolved with `resume`,
+    nothing had been done in the browser, and the next step failed with
+    `target_not_found` -- which reads exactly like UI drift and is not. The
+    activity capture already knows the session was untouched, so it says so at
+    the moment it happens and puts it in the record.
+    """
+    stream = io.StringIO()
+    handler = ConsoleOperatorHandler(stream=stream)
+
+    class Untouched:
+        actions: list[str] = []
+
+    outcome = handler._warn_if_untouched(
+        EscalationOutcome(resolved=True, resolution="resumed"),
+        Untouched(),  # type: ignore[arg-type]
+    )
+
+    assert outcome.resolved, "a warning, not a refusal -- the fix may be elsewhere"
+    assert "no activity was observed" in outcome.note
+    assert "WARNING" in stream.getvalue()
+
+
+def test_a_resume_after_real_work_is_not_flagged() -> None:
+    handler = ConsoleOperatorHandler(stream=io.StringIO())
+
+    class Touched:
+        actions = ["navigated top -> /console"]
+
+    outcome = handler._warn_if_untouched(
+        EscalationOutcome(resolved=True, resolution="resumed"),
+        Touched(),  # type: ignore[arg-type]
+    )
+    assert outcome.note == ""
+
+
 def test_intervention_briefing_carries_what_an_operator_needs() -> None:
     request = InterventionRequest(
         request_id="r1",
@@ -347,7 +427,15 @@ def test_operator_takes_over_the_same_session_and_the_run_completes(
     assert record.resolution == "resumed"
     assert record.operator == "supervisor@test"
     assert record.human_actions, "what the human did must be captured"
-    assert any("/login" in a for a in record.human_actions)
+    # Sampling reports where the session *got to*, not every hop on the way.
+    # The stand-in operator passes back through the sign-on page in well under
+    # one poll interval, so that hop is missed; what is caught is the state it
+    # restored the session to, which is the part that matters. A real person
+    # takes seconds per click and leaves the fuller trail.
+    assert all(a.startswith("navigated ") for a in record.human_actions)
+    assert any("/frame/home" in a for a in record.human_actions), (
+        "re-authentication lands the console back on its home screen"
+    )
 
     # Control moved and came back, on one session.
     assert session.human_touched

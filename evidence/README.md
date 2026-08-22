@@ -80,16 +80,40 @@ navigated main -> /frame/home
 reproducible without a person sitting at a terminal. Everything else is real:
 the session genuinely expires, the control token genuinely moves, the
 re-authentication happens in the same live browser, and the trail is observed
-rather than declared. To do it by hand instead:
+rather than declared.
+
+## Doing the handoff by hand
 
 ```bash
+python -m target_app.app                 # terminal 1
+
+python scripts/chaos.py expire           # terminal 2 -- arm the session failure
 python scripts/replay.py artifacts/meridian.member.read_savings_balance@v1.json \
     --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass \
     --operator --evidence manual-handoff
 ```
 
-That opens a real browser, and when the run stops it hands you the window and
-waits at a prompt for `resume`, `resume <step_id>`, or `abort`.
+A real browser opens. Sign-on bounces straight back to the sign-on page, the
+run stops, and the terminal prints a briefing listing every step you may
+resume from. The window is now yours: sign on by hand with `op.demo` /
+`demo-pass`, then type
+
+```
+resume open_member_search
+```
+
+and the run finishes from there. `resume` alone retries the step that stopped,
+and `abort` fails the run.
+
+Note *which* step it stops on. Arming the expiry before the run means the
+session dies during sign-on, so the flow never gets past step 3 and you resume
+from the search step. The committed `replay-human-handoff` run arms it later
+instead, mid-flow, which is the more realistic shape -- and it is why the
+capability declares two signals on the sign-on step: an outright credential
+rejection says *"Sign-on failed"* on the page, whereas an expired session
+silently returns you to the login screen with nothing to read. Only the second
+one is escalated to a human, because only that one is something a person can
+fix.
 
 ## Reproducing them
 

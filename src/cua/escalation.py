@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -99,6 +100,15 @@ class InterventionRequest(BaseModel):
         for frame in self.frames:
             label = frame.get("name") or "(top)"
             lines.append(f"    {label:<8} {frame.get('url', '')}")
+        if self.resumable_steps:
+            # An operator who has just fixed the session by hand needs to say
+            # where the flow now is, and cannot be expected to know the step
+            # ids by heart.
+            lines.append("")
+            lines.append("  steps you can resume from:")
+            for step_id in self.resumable_steps:
+                marker = "  <- stopped here" if step_id == self.step_id else ""
+                lines.append(f"    {step_id}{marker}")
         return "\n".join(lines)
 
 
@@ -132,6 +142,7 @@ def _build_request(context: EscalationContext, request_id: str) -> InterventionR
         observed=context.observed,
         surface_url=url,
         frames=frames,
+        resumable_steps=list(context.step_ids),
     )
 
 
@@ -156,6 +167,15 @@ class _HandoffScope:
         if isinstance(surface, ActivityRecorder):
             surface.start_activity_log()
         return self
+
+    def sample(self) -> None:
+        """Take one activity sample. Safe to call as often as you like."""
+        surface = self.context.session.surface
+        if isinstance(surface, ActivityRecorder):
+            try:
+                surface.poll_activity()
+            except Exception:  # noqa: BLE001 - recording must not break a handoff
+                pass
 
     def __exit__(self, *exc: object) -> None:
         session = self.context.session
@@ -206,7 +226,12 @@ class ConsoleOperatorHandler:
         print(self._menu(context), file=self.stream)
 
         with _HandoffScope(context, reason=request.reason) as scope:
-            answer = _read_line_with_timeout(self.timeout_seconds)
+            # Sampling the session while we wait is not optional: it is the
+            # only thing that records what the operator does, because nothing
+            # else re-enters the surface while a human is at the keyboard.
+            answer = _read_line_with_timeout(
+                self.timeout_seconds, tick=scope.sample
+            )
 
         if answer is None:
             print("  no response; aborting the run\n", file=self.stream)
@@ -217,15 +242,49 @@ class ConsoleOperatorHandler:
                 note=f"no operator response within {self.timeout_seconds}s",
             )
 
-        return self._interpret(answer, scope)
+        outcome = self._interpret(answer, scope)
+        return self._warn_if_untouched(outcome, scope)
+
+    def _warn_if_untouched(
+        self, outcome: EscalationOutcome, scope: "_HandoffScope"
+    ) -> EscalationOutcome:
+        """Flag a resume where the operator never touched the session.
+
+        The activity capture exists to record what a person did; it is also
+        the only way to notice that they did nothing. Resuming an unchanged
+        session almost always fails at the next step for reasons that look
+        like drift and are not -- so say so at the moment it happens, while
+        the cause is still obvious, and put it in the record.
+
+        A warning rather than a refusal: sometimes the right fix genuinely is
+        elsewhere -- a colleague cleared a queue, a batch job finished -- and
+        the operator is better placed to judge that than this code is.
+        """
+        if not outcome.resolved or scope.actions:
+            return outcome
+
+        warning = (
+            "no activity was observed on the session during the handoff, so "
+            "its state is unchanged from when the run stopped"
+        )
+        print(f"\n  WARNING: {warning}.", file=self.stream)
+        print("  If the resumed step fails, that is why.\n", file=self.stream)
+        return replace(
+            outcome, note=" ".join(filter(None, [outcome.note, warning]))
+        )
 
     # -- internals ---------------------------------------------------------
 
     def _menu(self, context: EscalationContext) -> str:
         return (
-            "\n  The browser window is yours. Fix the session by hand, then:\n"
+            "\n  ---------------------------------------------------------------\n"
+            "  DO THIS FIRST: switch to the browser window that is already open\n"
+            "  and fix the session there by hand. Nothing is automated while you\n"
+            "  hold it, and typing below hands control straight back.\n"
+            "  ---------------------------------------------------------------\n"
+            "\n  Then, in this terminal:\n"
             "    resume            continue from the step that stopped\n"
-            "    resume <step_id>  continue from a different step\n"
+            "    resume <step_id>  continue from a different step (see the list above)\n"
             "    abort             give up and fail the run\n"
             f"  (timeout {self.timeout_seconds}s)\n"
             "\n  > "
@@ -333,7 +392,9 @@ class ScriptedOperator:
         return replace(decision, actions=scope.actions or decision.actions)
 
 
-def _read_line_with_timeout(seconds: int) -> str | None:
+def _read_line_with_timeout(
+    seconds: int, tick: Callable[[], None] | None = None, tick_ms: int = 300
+) -> str | None:
     """Read one line from stdin, giving up after ``seconds``.
 
     Threaded rather than ``select``: this has to work on Windows, where
@@ -356,5 +417,17 @@ def _read_line_with_timeout(seconds: int) -> str | None:
 
     reader = threading.Thread(target=_read, daemon=True)
     reader.start()
-    reader.join(timeout=seconds)
+
+    if tick is None:
+        reader.join(timeout=seconds)
+        return answer[0] if answer else None
+
+    # Wake up regularly instead of blocking for the whole timeout, so the
+    # caller can sample the session while the operator works in it. The read
+    # itself stays on its own thread; only the waiting is chopped up.
+    deadline = time.monotonic() + seconds
+    while reader.is_alive() and time.monotonic() < deadline:
+        reader.join(timeout=tick_ms / 1000)
+        if reader.is_alive():
+            tick()
     return answer[0] if answer else None

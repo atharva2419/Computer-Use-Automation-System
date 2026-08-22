@@ -185,6 +185,15 @@ class ActivityRecorder(Protocol):
 
     def start_activity_log(self) -> None: ...
 
+    def poll_activity(self, settle_ms: int = 150) -> list[str]:
+        """Sample for new activity. Must be called periodically.
+
+        Recording is sampled rather than pushed, because a surface cannot
+        be assumed to deliver events to a caller that is sitting idle --
+        which is exactly what a caller does while waiting for a human.
+        """
+        ...
+
     def stop_activity_log(self) -> list[str]: ...
 
 

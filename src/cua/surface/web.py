@@ -80,7 +80,7 @@ class PlaywrightWebSurface:
         self._page: Page | None = None
         self._headless = headless
         self._activity: list[str] | None = None
-        self._nav_listener: Any = None
+        self._activity_seen: dict[str, str] = {}
         self._slow_mo = slow_mo_ms
         self._viewport = viewport
 
@@ -171,34 +171,60 @@ class PlaywrightWebSurface:
     def start_activity_log(self) -> None:
         """Begin recording navigations this surface did not initiate.
 
-        Used across a human handoff. Playwright reports frame navigations
-        regardless of who caused them, so an operator clicking through the
-        console leaves a trail without any cooperation from them.
+        Sampling, not event subscription. The obvious implementation hooks
+        ``page.on("framenavigated")``, and it does not work for this use case
+        for two independent reasons, both verified:
+
+        1. Sync Playwright only dispatches events when the caller re-enters
+           the library. A handoff blocks on operator input, so nothing
+           re-enters and the queued events never fire -- the trail comes back
+           empty from a session the human demonstrably used.
+        2. ``frame.url`` read inside the callback is the *previous* document,
+           the same frameset staleness that makes the cached property
+           unreliable everywhere else. A wrong URL is worse than none.
+
+        Sampling sidesteps both: ``poll_activity`` re-enters Playwright (which
+        is required anyway) and reads the live URL from the document. The
+        trade-off is that navigations between two polls are missed -- fine
+        here, because this records a person clicking, not a redirect chain.
         """
         self._activity = []
+        self._activity_seen = self._frame_urls()
 
-        def _on_navigated(frame: Frame) -> None:
-            if self._activity is None:
-                return
-            label = frame.name or "top"
-            entry = f"navigated {label} -> {frame.url}"
-            # Frameset children re-report the same URL on load; keep the trail
-            # readable rather than exhaustive.
-            if not self._activity or self._activity[-1] != entry:
-                self._activity.append(entry)
+    def poll_activity(self, settle_ms: int = 150) -> list[str]:
+        """Sample the surface and append anything that moved.
 
-        self._nav_listener = _on_navigated
-        self.page.on("framenavigated", _on_navigated)
+        Must be called periodically while activity is being recorded. Doubles
+        as the pump that lets Playwright process whatever else is pending.
+        """
+        if self._activity is None:
+            return []
+        try:
+            self.page.wait_for_timeout(settle_ms)
+        except PWError:
+            return self._activity
+
+        current = self._frame_urls()
+        for name, url in current.items():
+            if self._activity_seen.get(name) != url:
+                self._activity.append(f"navigated {name} -> {url}")
+        self._activity_seen = current
+        return self._activity
 
     def stop_activity_log(self) -> list[str]:
-        if self._nav_listener is not None:
-            try:
-                self.page.remove_listener("framenavigated", self._nav_listener)
-            except Exception:  # noqa: BLE001 - page may already be gone
-                pass
-            self._nav_listener = None
+        self.poll_activity()
         recorded, self._activity = self._activity or [], None
+        self._activity_seen = {}
         return recorded
+
+    def _frame_urls(self) -> dict[str, str]:
+        try:
+            return {
+                (frame.name or "top"): self._live_url(frame)
+                for frame in self.page.frames
+            }
+        except PWError:
+            return {}
 
     # -- frames -----------------------------------------------------------
 

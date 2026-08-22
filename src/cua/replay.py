@@ -94,6 +94,12 @@ class EscalationContext:
     signal_id: str | None
     observed: str
     session: Session
+    step_ids: list[str] = field(default_factory=list)
+    """Every step in the capability, so an operator can name a resume point.
+
+    Without this the handler can only offer "retry the step that failed",
+    which is the wrong answer whenever recovery moves the app somewhere else.
+    """
 
 
 @dataclass(slots=True)
@@ -638,6 +644,7 @@ class ReplayEngine:
             signal_id=signal_id,
             observed=observed,
             session=self.session,
+            step_ids=[s.id for s in capability.steps],
         )
         outcome = self.escalation.request(context)
 

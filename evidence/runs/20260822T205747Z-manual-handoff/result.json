@@ -1,0 +1,120 @@
+{
+  "run_id": "8368034901c9",
+  "capability_id": "meridian.member.read_savings_balance",
+  "capability_version": 1,
+  "started_at": "2026-08-22T20:57:48.344640Z",
+  "finished_at": "2026-08-22T20:59:21.315648Z",
+  "duration_ms": 92971,
+  "steps": [
+    {
+      "step_id": "open_signon",
+      "index": 0,
+      "intent": "Open the servicing console sign-on page.",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 1405,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Type the operator sign-on id.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 578,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_passphrase",
+      "index": 2,
+      "intent": "Type the operator passphrase.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 546,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_member_search",
+      "index": 4,
+      "intent": "Open Member Search from the function menu.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "text",
+      "strategy_rank": 0,
+      "duration_ms": 609,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_id",
+      "index": 5,
+      "intent": "Type the member ID being looked up.",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 30,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "run_search",
+      "index": 6,
+      "intent": "Run the member search.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_record",
+      "index": 7,
+      "intent": "Open the member record from the results row.",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 594,
+      "checkpoint_ok": true,
+      "note": ""
+    }
+  ],
+  "recoveries": [],
+  "escalations": [
+    {
+      "request_id": "71f5fc0fb8",
+      "step_id": "submit_signon",
+      "reason": "Sign-on returned to the sign-on page without an error. The servicing session was not established -- typically an expired or gateway-rejected session. A human re-establishes it and hands control back.",
+      "opened_at": "2026-08-22T20:57:51.443070Z",
+      "resolved_at": "2026-08-22T20:59:19.980591Z",
+      "resolution": "resumed",
+      "operator": "console",
+      "human_actions": []
+    }
+  ],
+  "evidence_dir": null,
+  "status": "success",
+  "outputs": {
+    "member_name": "[REDACTED:restricted str]",
+    "savings_balance": "[REDACTED:restricted float]",
+    "savings_account_number": "[REDACTED:restricted str]"
+  },
+  "outputs_written": false,
+  "output_names": [
+    "member_name",
+    "savings_account_number",
+    "savings_balance"
+  ]
+}

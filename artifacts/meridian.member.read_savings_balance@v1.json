@@ -315,6 +315,23 @@
           "recovery": null,
           "escalate": false,
           "message": "Sign-on was rejected. Treated as a hard failure rather than a business outcome: the caller supplied bad operator credentials, which is a configuration fault in the invocation, not an answer about a member."
+        },
+        {
+          "id": "signon_session_not_established",
+          "description": "Sign-on submitted but the console never loaded and no credential error was shown.",
+          "detect": {
+            "kind": "url_matches",
+            "frame": {
+              "kind": "top",
+              "value": null
+            },
+            "pattern": "/login"
+          },
+          "classification": "hard_failure",
+          "outcome_code": null,
+          "recovery": null,
+          "escalate": true,
+          "message": "Sign-on returned to the sign-on page without an error. The servicing session was not established -- typically an expired or gateway-rejected session. A human re-establishes it and hands control back."
         }
       ]
     },
@@ -666,7 +683,7 @@
   },
   "approval": "draft",
   "provenance": {
-    "discovered_at": "2026-08-18T05:10:34.614615Z",
+    "discovered_at": "2026-08-21T23:48:22.207698Z",
     "model": "n/a",
     "discovery_run_id": null,
     "transcript_digest": null,

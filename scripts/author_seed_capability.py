@@ -394,6 +394,29 @@ capability = Capability(
                         "in the invocation, not an answer about a member."
                     ),
                 ),
+                SignalRule(
+                    id="signon_session_not_established",
+                    description=(
+                        "Sign-on submitted but the console never loaded and no "
+                        "credential error was shown."
+                    ),
+                    # Evaluated after signon_rejected, so a genuine bad-password
+                    # bounce is claimed by the more specific signal first. What
+                    # is left is the quiet case: correct credentials, but the
+                    # session did not survive -- the app simply returns you to
+                    # the sign-on page with nothing to read. Without this the
+                    # condition degrades into a generic checkpoint timeout,
+                    # which tells an operator nothing about what to do.
+                    detect=UrlMatches(frame=TOP, pattern=r"/login"),
+                    classification="hard_failure",
+                    escalate=True,
+                    message=(
+                        "Sign-on returned to the sign-on page without an error. "
+                        "The servicing session was not established -- typically "
+                        "an expired or gateway-rejected session. A human "
+                        "re-establishes it and hands control back."
+                    ),
+                ),
             ],
         ),
         Step(
