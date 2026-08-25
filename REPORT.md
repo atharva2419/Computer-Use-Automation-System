@@ -48,6 +48,26 @@ contract rather than a transcript of whatever a model emitted, and it meant
 surface bugs surfaced from deterministic tests in seconds instead of from
 confusing model runs.
 
+### Stack, and what it was chosen over
+
+| | choice | why, and the alternative rejected |
+|---|---|---|
+| Language | Python 3.11 | Pydantic v2 makes the artifact one definition that serves three jobs: runtime validation, static types, and a JSON Schema a calling agent can consume as a tool contract. TypeScript + Zod is an equally good answer; the tie-break was fluency. |
+| Automation | Playwright | Best accessibility-tree access of the browser drivers, plus per-frame control this frameset needs. Selenium has weaker a11y support; a screenshot-and-coordinates CUA would have been more impressive-sounding and far less defensible — coordinates cannot be recorded into a durable locator, which is the entire deliverable. |
+| Model | Claude Sonnet | Short-horizon navigation over a small tool surface. Opus is unnecessary for it and costs more per discovery; the loop reads `CUA_MODEL`, so swapping is config, not code. |
+| Storage | JSON files | Diffable in review, language-neutral, and — critically — **not executable**. A model emitting a Playwright script would be arbitrary code you cannot risk-classify before running it. A document can only express the six action kinds the schema permits, which is what lets the guardrail inspect every step in advance. |
+
+**The agent loop is deliberately narrow.** Eight tools mirroring the action
+schema one-to-one, so a trajectory is always recordable — the model cannot
+reach the goal by a route replay could not reproduce. No `execute_javascript`,
+no raw selectors, no coordinates. One action per turn, because each action
+changes the screen and a batch is decided against a state that no longer
+exists. Perception is the accessibility tree by default with screenshots
+available on request, since the tree is both cheaper and more precise. Four
+stopping conditions are enforced by the harness rather than trusted to the
+model: a step budget, a wall-clock budget, a no-progress detector, and the
+model's own `done`/`stuck`.
+
 ---
 
 ## 2. Artifact schema
