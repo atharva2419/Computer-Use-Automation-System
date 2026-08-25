@@ -303,8 +303,8 @@ def test_a_resolving_operator_lets_the_run_continue(
 ) -> None:
     """The same seam, with a handler that fixes the problem and hands back.
 
-    Stands in for step E: it proves the engine resumes the *same* run on the
-    *same* session after a human intervenes, rather than aborting.
+    Proves the engine resumes the *same* run on the *same* session after a
+    human intervenes, rather than aborting.
     """
 
     class ReAuthenticatingOperator:
@@ -582,11 +582,10 @@ def test_an_omitted_optional_parameter_types_nothing(
 ) -> None:
     """An optional input a step types into must bind to empty, not explode.
 
-    Found by running the documented demo command: the sub-account form has an
-    optional nickname, the step that fills it referenced the parameter
-    unconditionally, and omitting it raised mid-run. That surfaced as
-    `internal_error` -- blaming the automation for what was a perfectly legal
-    invocation.
+    The sub-account form has an optional nickname and the step that fills it
+    references the parameter unconditionally. Omitting it used to raise
+    mid-run and surface as `internal_error`, blaming the automation for a
+    perfectly legal invocation.
     """
     from cua import params as params_module
 

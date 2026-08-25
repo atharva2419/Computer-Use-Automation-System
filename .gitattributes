@@ -1,0 +1,20 @@
+# Normalise line endings so the repository is byte-identical regardless of the
+# platform it was authored on. Without this, a Windows checkout commits CRLF
+# and a reviewer on macOS or Linux sees every line of every file as changed --
+# which buries the actual diff.
+#
+# `text=auto eol=lf` stores LF in the repository and checks out LF everywhere.
+* text=auto eol=lf
+
+# Binary payloads: never touch these.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Evidence is generated output. Marking it explicitly keeps a stray CRLF in a
+# captured page snapshot from being rewritten, which would break the SHA-256
+# transcript digests recorded in artifact provenance.
+evidence/**/*.png binary

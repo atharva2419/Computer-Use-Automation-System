@@ -9,3 +9,7 @@ venv/
 # committed run evidence. Scratch runs can be deleted; kept ones are part
 # of the deliverable.
 node_modules/
+
+# Editor-local settings
+.vscode/
+.idea/

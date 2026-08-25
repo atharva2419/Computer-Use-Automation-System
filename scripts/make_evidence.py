@@ -30,7 +30,7 @@ from typing import Any, Callable
 
 from cua.escalation import ScriptedOperator
 from cua.evidence import FileEvidenceSink
-from cua.guardrails import Policy, PolicyGate
+from cua.guardrails import PolicyGate
 from cua.replay import EscalationContext, EscalationOutcome, ReplayEngine
 from cua.schema.capability import Capability
 from cua.session import Session

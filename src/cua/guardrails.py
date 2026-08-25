@@ -26,7 +26,7 @@ from __future__ import annotations
 import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from urllib.parse import urlsplit
 
 import yaml

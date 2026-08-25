@@ -33,7 +33,7 @@ from cua.redaction import Redactor
 from cua.replay import EscalationContext, EscalationOutcome, ReplayEngine
 from cua.schema.capability import Capability
 from cua.schema.result import StepRecord
-from cua.session import Actor, ControlViolation, Session
+from cua.session import Actor, Session
 from cua.surface.base import ActivityRecorder
 from cua.surface.web import PlaywrightWebSurface
 from target_app import app as target_module

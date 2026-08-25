@@ -19,7 +19,6 @@ that cannot immediately reproduce itself stays a draft, and says why.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 from pathlib import Path
@@ -179,7 +178,13 @@ def main() -> int:
         session.release()
         surface.close()
 
-    (directory / "transcript.json").write_text(result.transcript, encoding="utf-8")
+    # newline="\n" matters here: Path.write_text translates \n to \r\n on
+    # Windows by default, and the artifact's provenance records a SHA-256 of
+    # this transcript. Without it the digest never matches the file on disk,
+    # so the one field a reviewer might independently verify silently fails.
+    (directory / "transcript.json").write_text(
+        result.transcript, encoding="utf-8", newline="\n"
+    )
     sink.note(
         "discovery_finished",
         status=result.status,
@@ -200,7 +205,9 @@ def main() -> int:
         return 1
 
     path = args.out / f"{result.capability.id}@v{result.capability.version}.json"
-    path.write_text(result.capability.model_dump_json(indent=2), encoding="utf-8")
+    path.write_text(
+        result.capability.model_dump_json(indent=2), encoding="utf-8", newline="\n"
+    )
     print(f"\n  artifact -> {path}")
     print(f"  steps    : {[s.id for s in result.capability.steps]}")
     print(f"  outputs  : {[o.name for o in result.capability.outputs]}")
@@ -265,7 +272,9 @@ def _verify(capability, bound, gate, redactor, path: Path) -> int:
 
     if outcome.status == "success":
         capability.approval = "approved"
-        path.write_text(capability.model_dump_json(indent=2), encoding="utf-8")
+        path.write_text(
+            capability.model_dump_json(indent=2), encoding="utf-8", newline="\n"
+        )
         print(f"  {GREEN}reproduced{RESET}: outputs {sorted(outcome.outputs)}")
         print(f"  approval promoted to {GREEN}approved{RESET}")
         return 0

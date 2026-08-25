@@ -35,7 +35,6 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -44,14 +43,10 @@ from .schema.capability import (
     AppBinding,
     Capability,
     Checkpoint,
-    ClickAction,
     Extraction,
-    FillAction,
-    NavigateAction,
     OutputSpec,
     ParamSpec,
     Provenance,
-    SelectAction,
     SignalRule,
     Step,
     Transform,

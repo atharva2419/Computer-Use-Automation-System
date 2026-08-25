@@ -236,11 +236,10 @@ class PlaywrightWebSurface:
         ranked strategies against a deadline. A blocking wait in here would be
         a second, nested retry, and the costs multiply.
 
-        Concretely: the sign-on page has no ``main`` frame, and this
-        capability declares five signals that watch it. With a 5s wait per
-        lookup, one signal sweep cost 25 seconds -- the whole replay took 90s
-        instead of 4s and the timing looked like a hang. Non-blocking lookup
-        plus one outer loop is both faster and easier to reason about.
+        Concretely: the sign-on page has no ``main`` frame, and a capability
+        may declare several signals that watch it. At a 5s wait per lookup one
+        signal sweep costs 25 seconds. Non-blocking lookup plus a single outer
+        loop is both faster and easier to reason about.
 
         ``navigate`` passes an explicit timeout, because there a frame genuinely
         must exist before the call can mean anything.

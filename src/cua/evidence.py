@@ -110,7 +110,7 @@ class FileEvidenceSink:
 
         if observation:
             snap = self.directory / "observation.txt"
-            snap.write_text(observation, encoding="utf-8")
+            snap.write_text(observation, encoding="utf-8", newline="\n")
             written.append(str(snap))
 
         payload = detail.model_dump(mode="json")
@@ -140,7 +140,7 @@ class FileEvidenceSink:
             }
 
         (self.directory / "result.json").write_text(
-            json.dumps(summary, indent=2), encoding="utf-8"
+            json.dumps(summary, indent=2), encoding="utf-8", newline="\n"
         )
         self._append({"kind": "run_finished", "run_id": run_id, "status": result.status})
 
@@ -160,7 +160,9 @@ class FileEvidenceSink:
         if self.directory is None:
             return
         payload = {"at": _now(), **payload}
-        with (self.directory / "run.jsonl").open("a", encoding="utf-8") as fh:
+        with (self.directory / "run.jsonl").open(
+            "a", encoding="utf-8", newline="\n"
+        ) as fh:
             fh.write(json.dumps(payload, default=str) + "\n")
 
 

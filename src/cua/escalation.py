@@ -363,7 +363,7 @@ class ConsoleOperatorHandler:
         directory = Path(self.sink.directory)
         name = f"intervention-{self._counter}"
         (directory / f"{name}.json").write_text(
-            redacted.model_dump_json(indent=2), encoding="utf-8"
+            redacted.model_dump_json(indent=2), encoding="utf-8", newline="\n"
         )
         self.sink.note(
             "intervention_requested",

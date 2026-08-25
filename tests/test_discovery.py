@@ -26,7 +26,7 @@ from cua.agent.tools import TOOLS, tool_names
 from cua.guardrails import Policy, PolicyGate
 from cua.recorder import Recorder, load_signal_library, step_id_for
 from cua.replay import ReplayEngine
-from cua.schema.capability import AppBinding, Capability, ParamSpec
+from cua.schema.capability import AppBinding, ParamSpec
 from cua.session import Session
 from cua.surface.web import PlaywrightWebSurface
 from target_app import app as target_module

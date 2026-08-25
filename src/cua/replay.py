@@ -137,10 +137,10 @@ class EscalationHandler(Protocol):
 class NoOperatorAvailable:
     """Default handler: records the request and declines it.
 
-    Replaced in step E by a handler that actually transfers control. Failing
-    closed matters -- an unattended replay that cannot reach a human must stop
-    and say so, not press on past a condition it already decided it could not
-    handle.
+    ``cua.escalation`` supplies the handler that actually transfers control.
+    Failing closed matters: an unattended replay that cannot reach a human must
+    stop and say so, not press on past a condition it already decided it could
+    not handle.
     """
 
     def request(self, context: EscalationContext) -> EscalationOutcome:
@@ -339,7 +339,6 @@ class ReplayEngine:
         self, capability: Capability, step: Step, index: int, bound: dict[str, str]
     ) -> None:
         started = time.monotonic()
-        surface = self._surface()
 
         decision = self.gate.check(
             GateRequest(

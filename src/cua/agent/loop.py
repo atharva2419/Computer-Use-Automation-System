@@ -22,7 +22,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from .. import assertions
 from ..evidence import FileEvidenceSink
 from ..guardrails import GateRequest, PolicyGate
 from ..recorder import Recorder, RecorderError, step_id_for
