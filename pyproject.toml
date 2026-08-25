@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cua"
 version = "0.1.0"
+description = "Computer-Use Automation: an LLM discovers a UI flow once, it is recorded as a typed capability artifact, and thereafter replays deterministically with no model in the loop."
 requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
