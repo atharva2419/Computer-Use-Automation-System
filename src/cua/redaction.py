@@ -83,15 +83,40 @@ class Redactor:
     # -- application -------------------------------------------------------
 
     def text(self, value: str | None) -> str:
+        """Full redaction: secrets and regulated-looking data. For storage."""
+        out = self.secrets_only(value)
+        for pattern in self.patterns:
+            out = pattern.regex.sub(f"[REDACTED:{pattern.name}]", out)
+        return out
+
+    def secrets_only(self, value: str | None) -> str:
+        """Mask credentials but leave business data intact.
+
+        For what the *model* is shown during discovery, which is a different
+        problem from what gets written down.
+
+        A credential is never needed to reason about a screen -- the agent
+        types one by naming a parameter -- so it is masked even when the
+        application prints it, as this console does on its own sign-on page.
+
+        Regulated business data is the opposite: the agent cannot navigate a
+        member record it is not allowed to read. Masking it produced a real
+        failure -- the model quoted ``"Savings [REDACTED:account_number]
+        4210.55"`` as the text proving it had arrived, because that is
+        genuinely what it had been shown, and the assertion then could not
+        hold against the actual page. Redacting a model's perception makes it
+        reason about a screen that does not exist.
+
+        So the data reaches the model and is scrubbed on the way to disk. The
+        real limit that leaves is disclosure to the provider, which is a
+        contractual control (zero-retention terms) rather than one this code
+        can enforce -- recorded in the write-up rather than papered over.
+        """
         if not value:
             return value or ""
         out = value
-        # Secrets first: an exact value may itself look like a pattern match,
-        # and masking it as a secret is the more precise statement.
         for secret in sorted(self._secrets, key=len, reverse=True):
             out = out.replace(secret, SECRET_MASK)
-        for pattern in self.patterns:
-            out = pattern.regex.sub(f"[REDACTED:{pattern.name}]", out)
         return out
 
     def value(self, value: Any) -> Any:

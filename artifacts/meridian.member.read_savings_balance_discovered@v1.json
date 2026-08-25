@@ -1,0 +1,554 @@
+{
+  "schema_version": "1.0.0",
+  "id": "meridian.member.read_savings_balance_discovered",
+  "version": 1,
+  "name": "Read member savings balance (discovered)",
+  "description": "Sign on to the servicing console, look up member 10001, open their record, and read the current balance of their Savings account",
+  "app": {
+    "product": "meridian-core",
+    "product_version": "r7.4.1",
+    "tenant": null,
+    "entry_url": "http://127.0.0.1:5057/login",
+    "surface": "legacy_web"
+  },
+  "inputs": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as '10001'.",
+      "example": "10001",
+      "pattern": "^\\d{4,8}$",
+      "sensitivity": "restricted",
+      "secret": false
+    },
+    {
+      "name": "operator_id",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as 'op.demo'.",
+      "example": "op.demo",
+      "pattern": null,
+      "sensitivity": "restricted",
+      "secret": false
+    },
+    {
+      "name": "operator_passphrase",
+      "type": "string",
+      "required": true,
+      "description": "Operator credential.",
+      "example": null,
+      "pattern": null,
+      "sensitivity": "restricted",
+      "secret": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "savings_balance",
+      "type": "money",
+      "description": "",
+      "extract": {
+        "target": {
+          "described_as": "Read Savings account current balance",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "row_scoped_cell",
+              "row_contains": "Savings",
+              "cell_index": 2,
+              "exact_row_text": false
+            }
+          ],
+          "rationale": "Anchored on the row containing 'Savings' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
+        },
+        "source": "text",
+        "attribute": null,
+        "transform": {
+          "kind": "money",
+          "pattern": null
+        }
+      },
+      "required": true,
+      "after_step": "open_member_record_for",
+      "sensitivity": "restricted"
+    }
+  ],
+  "steps": [
+    {
+      "id": "go_to_the_servicing",
+      "intent": "Go to the servicing console login page",
+      "action": {
+        "kind": "navigate",
+        "url": {
+          "kind": "literal",
+          "value": "http://127.0.0.1:5057/login"
+        },
+        "frame": {
+          "kind": "top",
+          "value": null
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Sign on' is present after go_to_the_servicing.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "Sign on",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_operator_id",
+      "intent": "Enter operator ID",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter operator ID",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Operator ID",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Operator ID",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=f1]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Operator ID' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='f1' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_operator_passphrase",
+      "intent": "Enter operator passphrase",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter operator passphrase",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Passphrase",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Passphrase",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=f2]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Passphrase' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='f2' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_passphrase"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "sign_on_to_the",
+      "intent": "Sign on to the console",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Sign on to the console",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Sign On",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Sign On",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Sign On'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "go_to_member_search",
+      "intent": "Go to Member Search",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Go to Member Search",
+          "frame": {
+            "kind": "name",
+            "value": "nav"
+          },
+          "strategies": [
+            {
+              "kind": "text",
+              "text": "Member Search",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Non-semantic control with no interactive role; 'Member Search' is the only thing that identifies it, as it is for a human."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Member Search' is present after go_to_member_search.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "nav"
+          },
+          "text": "Member Search",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_member_id_to",
+      "intent": "Enter member ID to search",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter member ID to search",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Member ID",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Member ID",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=f1]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Member ID' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='f1' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "member_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "search_for_member_10001",
+      "intent": "Search for member 10001",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Search for member 10001",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Search",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Search",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Search'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": null,
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "open_member_record_for",
+      "intent": "Open member record for 10001",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Open member record for 10001",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Open Record",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Open Record",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'link' with accessible name 'Open Record'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Ada Wexler' is present after open_member_record_for.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "text": "Ada Wexler",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    }
+  ],
+  "signals": [
+    {
+      "id": "member_not_found",
+      "description": "The searched member ID matched no record.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "NO RECORD FOUND",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "MEMBER_NOT_FOUND",
+      "recovery": null,
+      "escalate": false,
+      "message": "No member matches the supplied member ID."
+    },
+    {
+      "id": "permission_denied",
+      "description": "The record exists but this operator role may not view it.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "PERMISSION DENIED",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "PERMISSION_DENIED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The member record exists but the automation operator is not entitled to view it. A caller may legitimately need to know this, so it is an outcome rather than a failure -- but it also means the answer was not obtained, and the caller must branch on it."
+    },
+    {
+      "id": "system_notice",
+      "description": "Unscheduled maintenance interstitial blocking the flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "SYSTEM NOTICE",
+        "case_sensitive": false
+      },
+      "classification": "recoverable",
+      "outcome_code": null,
+      "recovery": {
+        "kind": "dismiss_and_retry",
+        "dismiss": {
+          "described_as": "the Acknowledge button on the system notice interstitial",
+          "frame": {
+            "kind": "name",
+            "value": "main"
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Acknowledge",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Acknowledge",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Dismissal control for the maintenance interstitial."
+        },
+        "max_attempts": 2
+      },
+      "escalate": false,
+      "message": "Dismissed the maintenance interstitial and retried the step."
+    },
+    {
+      "id": "session_expired",
+      "description": "Operator sign-on lapsed mid-flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "name",
+          "value": "main"
+        },
+        "text": "SESSION EXPIRED",
+        "case_sensitive": false
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": true,
+      "message": "The servicing session expired mid-flow. Re-authenticating unattended is deliberately not automated: it would mean the system holds and replays operator credentials outside the invocation that supplied them, and a blind retry against an unknown rejection risks locking the account. A human re-establishes the session and hands control back."
+    },
+    {
+      "id": "app_error",
+      "description": "The servicing subsystem returned a fault page.",
+      "detect": {
+        "kind": "any_of",
+        "of": [
+          {
+            "kind": "text_present",
+            "frame": {
+              "kind": "name",
+              "value": "main"
+            },
+            "text": "APPLICATION ERROR",
+            "case_sensitive": false
+          },
+          {
+            "kind": "text_present",
+            "frame": {
+              "kind": "top",
+              "value": null
+            },
+            "text": "APPLICATION ERROR",
+            "case_sensitive": false
+          }
+        ]
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": false,
+      "message": "The application returned fault MCX-5000."
+    }
+  ],
+  "success": {
+    "description": "Goal reached: 'Savings SAV-0001 4210.55' is on screen.",
+    "assertion": {
+      "kind": "text_present",
+      "frame": {
+        "kind": "name",
+        "value": "main"
+      },
+      "text": "Savings SAV-0001 4210.55",
+      "case_sensitive": false
+    },
+    "timeout_ms": 8000
+  },
+  "approval": "approved",
+  "provenance": {
+    "discovered_at": "2026-08-23T03:47:31.794945Z",
+    "model": "claude-sonnet-5",
+    "discovery_run_id": "1b9fde880028",
+    "transcript_digest": "5d6aa1d7f9bdf4af7539d4099795b873727898dd632f5e37d1a388e798d2660b",
+    "recorded_by": "llm_discovery"
+  },
+  "tags": []
+}

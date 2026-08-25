@@ -577,6 +577,38 @@ def test_malformed_parameter_is_rejected_without_touching_the_ui(
     assert "member_id" in result.error.observed
 
 
+def test_an_omitted_optional_parameter_types_nothing(
+    harness: Harness, capability: Capability
+) -> None:
+    """An optional input a step types into must bind to empty, not explode.
+
+    Found by running the documented demo command: the sub-account form has an
+    optional nickname, the step that fills it referenced the parameter
+    unconditionally, and omitting it raised mid-run. That surfaced as
+    `internal_error` -- blaming the automation for what was a perfectly legal
+    invocation.
+    """
+    from cua import params as params_module
+
+    raw = capability.model_dump()
+    raw["inputs"].append(
+        {"name": "nickname", "type": "string", "required": False,
+         "description": "Optional label.", "sensitivity": "internal"}
+    )
+    with_optional = Capability.model_validate(raw)
+
+    bound = params_module.validate(
+        with_optional, {"member_id": "10001", **CREDS}
+    )
+    assert bound["nickname"] == ""
+
+    # And a value that *is* supplied still comes through untouched.
+    bound = params_module.validate(
+        with_optional, {"member_id": "10001", "nickname": "vacation", **CREDS}
+    )
+    assert bound["nickname"] == "vacation"
+
+
 def test_missing_required_parameter_is_rejected(
     harness: Harness, capability: Capability
 ) -> None:

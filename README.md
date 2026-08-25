@@ -1,156 +1,229 @@
 # Computer-Use Automation System
 
-An LLM works out how to complete a task inside a legacy UI that has no API. The
-successful run is recorded as a typed, versioned **capability**. From then on
-that capability replays deterministically, with no model in the decision loop,
-and escalates to a human when it must not proceed alone.
+An LLM works out how to do a job inside a UI that has no API. That run is
+recorded as a typed, versioned **capability artifact**. From then on the job is
+done by **replaying the artifact with no model involved** — under a policy,
+with evidence, and with a human reachable when it gets stuck.
 
-> The model discovers. The artifact becomes a reusable capability. Deterministic
-> replay is how the AI agent invokes it in production.
+Design write-up: **[REPORT.md](REPORT.md)**. Run evidence: **[evidence/](evidence/)**.
 
-The design write-up is in **[REPORT.md](REPORT.md)**. Evidence from real runs is
-in **[evidence/](evidence/README.md)**.
+```
+DISCOVERY  (once, ~25s)              REPLAY  (forever, ~3.7s, no API key)
+  goal in English                      artifact + typed params
+  Claude drives the UI                 engine executes recorded steps
+        ↓                                     ↓
+  artifact.json  ──────────────────────►  success | business outcome | failure
+```
+
+The target is **MERIDIAN CORE**, a deliberately legacy credit-union servicing
+console built for this project: a real `<frameset>`, nested tables, no test
+IDs, form fields named `f1`/`f2`, menu items that are `<td onclick>`, and seven
+injectable runtime faults. All data is synthetic.
 
 ---
 
 ## Setup
 
-Python 3.12+. From the repository root:
+Requires Python 3.11+ and about 2 minutes.
 
 ```bash
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
+# source .venv/bin/activate && pip install -r requirements.txt  # macOS/Linux
+
 .venv/Scripts/python.exe -m playwright install chromium
 ```
 
-On macOS or Linux use `.venv/bin/python` throughout.
+**Config.** Only the discovery run needs a key. Copy the template and add one:
 
-**No API key is needed for anything below.** Replay, the guardrails, the human
-handoff, the evidence set and the whole test suite run without a model. A key
-is only required for a discovery run — copy `.env.example` to `.env` and set
-`ANTHROPIC_API_KEY` when you want one.
+```bash
+cp .env.example .env
+```
+
+```
+ANTHROPIC_API_KEY=sk-ant-...          # discovery only
+CUA_MODEL=claude-sonnet-5             # default if unset
+TARGET_BASE_URL=http://127.0.0.1:5057
+```
+
+`.env` is gitignored. A discovery run costs a few cents.
+
+**Everything except discovery runs with no API key and no external services** —
+the target app is local, and replay, guardrails, the human handoff, evidence
+and all 109 tests never load a model library. There is a test that asserts
+exactly that: it removes `anthropic` from `sys.modules`, replays a capability,
+and checks it never comes back.
+
+---
 
 ## Demo path
 
 **Terminal 1 — the target application.** Leave it running.
 
 ```bash
-python -m target_app.app
+.venv/Scripts/python.exe -m target_app.app
 ```
 
-`MERIDIAN CORE`, a deliberately legacy credit-union servicing console at
-<http://127.0.0.1:5057>. Sign on with `op.demo` / `demo-pass` and click
-around: **Member Search → `10001` → Open Record**. View source to see what the
-automation is up against — a real `<frameset>`, nested tables, no IDs or test
-hooks, form fields named `f1`/`f2`/`f3`, navigation via `<td onclick>`, and text
-inputs with **no accessible name at all**.
+Visit <http://127.0.0.1:5057> and sign on as `op.demo` / `demo-pass` to see
+what the automation is up against. View source anywhere.
 
-**Terminal 2 — replay a capability.**
+**Terminal 2 — everything else.**
+
+### 1. Run the agent on a goal
 
 ```bash
-python scripts/replay.py artifacts/meridian.member.read_savings_balance@v1.json \
-    --param member_id=10001 \
-    --param operator_id=op.demo --param operator_passphrase=demo-pass
+.venv/Scripts/python.exe scripts/discover.py \
+  --goal "Sign on to the servicing console, look up member {member_id}, open their record, and read the current balance of their Savings account" \
+  --id meridian.member.read_savings_balance_discovered \
+  --name "Read member savings balance (discovered)" \
+  --param member_id=10001 \
+  --param operator_id=op.demo \
+  --secret operator_passphrase=demo-pass \
+  --pattern "member_id=^\d{4,8}$" \
+  --evidence discovery
 ```
 
-Returns `member_name`, `savings_balance` (typed as a number, not the string the
-screen shows) and `savings_account_number` in about four seconds. Add
-`--headed --slow 300` to watch it, or `--evidence demo` to write a run trail.
+Claude drives the console, the recorder writes
+`artifacts/<id>@v1.json`, and the run **finishes by replaying what it just
+recorded**. A capability that cannot immediately reproduce itself stays a
+`draft`; one that does is promoted to `approved`.
 
-**Same artifact, different answers.** Nothing changes but the input:
+Add `--headed` to watch it. The credential is passed with `--secret`: the model
+is never shown its value and types it by naming the parameter.
+
+### 2. Replay the resulting artifact
+
+No model, no key:
 
 ```bash
-... --param member_id=99999    # business_outcome MEMBER_NOT_FOUND
-... --param member_id=20002    # business_outcome PERMISSION_DENIED
-... --param member_id=oops     # failed invalid_input, with zero steps executed
+.venv/Scripts/python.exe scripts/replay.py \
+  artifacts/meridian.member.read_savings_balance_discovered@v1.json \
+  --param member_id=10001 --param operator_id=op.demo --param operator_passphrase=demo-pass
 ```
 
-The first two are **not failures**. The automation worked; the answer was
-negative, and the caller gets a code to branch on.
+```
+SUCCESS   meridian.member.read_savings_balance_discovered v1   in 3680ms
+  ok  0. go_to_the_servicing      -                     1077ms
+  ok  1. enter_operator_id        label_cell@rank0       562ms
+  ...
+  outputs
+    savings_balance          4210.55
+```
 
-**Trigger a runtime fault**, then replay again:
+`label_cell@rank0` is which locator strategy resolved and at what rank —
+falling through to a lower rank is the drift signal.
+
+### 3. Then the interesting part: the same artifact, different outcomes
 
 ```bash
-python scripts/chaos.py notice   # a maintenance interstitial -> recovered, still succeeds
-python scripts/chaos.py error    # an application fault page  -> failed app_error
-python scripts/chaos.py expire   # a lapsed session           -> escalates to a human
-python scripts/chaos.py reset
+A=artifacts/meridian.member.read_savings_balance@v1.json
+C="--param operator_id=op.demo --param operator_passphrase=demo-pass"
+
+# a legitimate negative answer, not a crash
+.venv/Scripts/python.exe scripts/replay.py $A --param member_id=99999 $C
+# the record exists; this operator may not see it
+.venv/Scripts/python.exe scripts/replay.py $A --param member_id=20002 $C
+# rejected before the browser opens
+.venv/Scripts/python.exe scripts/replay.py $A --param member_id=oops  $C
 ```
 
-**A capability that changes something.** Twelve steps run unattended, then it
-stops dead at the click that creates the account:
+Inject faults, then replay again:
 
 ```bash
-python scripts/replay.py artifacts/meridian.member.open_subaccount@v1.json \
-    --param member_id=10001 --param product_type=Holiday \
-    --param opening_deposit=150.00 --param nickname="Holiday Fund" \
-    --param operator_id=op.demo --param operator_passphrase=demo-pass
+.venv/Scripts/python.exe scripts/chaos.py notice   # interstitial -> recovered, still succeeds
+.venv/Scripts/python.exe scripts/chaos.py error    # HTTP 500     -> hard failure with detail
+.venv/Scripts/python.exe scripts/chaos.py slow 2500
+.venv/Scripts/python.exe scripts/chaos.py reset
 ```
 
-→ `escalation_unresolved`. Policy classifies `Submit Request` as irreversible
-and requires a person. Add `--operator` and you become that person: the browser
-is handed to you, you approve, and the run completes.
-
-**See the automation reason.** A narrated walk-through of how each control is
-located, including a deliberately stale locator degrading to a fallback:
+### 4. Take control of a live session
 
 ```bash
-python scripts/demo_surface.py
+.venv/Scripts/python.exe scripts/chaos.py expire
+.venv/Scripts/python.exe scripts/replay.py $A --param member_id=10001 $C \
+  --operator --evidence manual-handoff
 ```
 
-**Everything at once.**
+Sign-on bounces back, the run stops, and the terminal hands you the **same
+browser window** with a briefing and the steps you may resume from. Sign on by
+hand, then type `resume open_member_search`. Your navigations are recorded by
+watching the session, not by asking you.
+
+### 5. An irreversible action needs a person
 
 ```bash
-python -m pytest -q                        # 96 tests against the real browser, ~2 min
-python scripts/make_evidence.py --clean    # regenerate all 10 evidence runs
+.venv/Scripts/python.exe scripts/replay.py \
+  artifacts/meridian.member.open_subaccount@v1.json \
+  --param member_id=10001 --param product_type=Holiday --param opening_deposit=150 $C
 ```
+
+Fails closed with `escalation_unresolved`: opening an account is classified
+irreversible by [config/policy.yaml](config/policy.yaml), and no operator was
+attached. Add `--operator` to approve it and let the flow finish.
+
+### Other things to run
+
+```bash
+.venv/Scripts/python.exe scripts/demo_surface.py     # watch the locator layer, narrated
+.venv/Scripts/python.exe -m pytest -q                # 109 tests, ~3 min, real browser
+.venv/Scripts/python.exe -m pyright src/cua tests scripts
+```
+
+`demo_surface.py` is the clearest single view of the hard part: it shows
+`role+name` **failing** on an input with no accessible name, then `label_cell`
+resolving it, and a deliberately stale locator degrading to rank 1.
+
+---
 
 ## Repository layout
 
-| Path | What it is |
+| Path | |
 |---|---|
-| `src/cua/schema/` | The capability artifact and the replay result contract |
-| `src/cua/surface/` | The perceive/act seam. `web.py` is the only file that imports Playwright |
-| `src/cua/replay.py` | Deterministic replay — no model on this path |
-| `src/cua/guardrails.py` | Allowlist and risk enforcement, driven by `config/policy.yaml` |
-| `src/cua/escalation.py` | Intervention requests and human control transfer |
-| `src/cua/evidence.py` | Run trails, screenshots, accessibility snapshots |
-| `artifacts/` | Two capabilities: one read-only, one that creates a record |
-| `config/policy.yaml` | The entire guardrail, as reviewable configuration |
-| `target_app/` | MERIDIAN CORE, the intentionally hostile proxy target |
-| `evidence/` | Ten committed runs — [start here](evidence/README.md) |
+| [src/cua/schema/](src/cua/schema/) | The capability artifact and the replay result contract |
+| [src/cua/surface/](src/cua/surface/) | `Surface` protocol (14 methods) + the only file that imports Playwright |
+| [src/cua/replay.py](src/cua/replay.py) | Deterministic execution — no model on this path |
+| [src/cua/agent/](src/cua/agent/) | Discovery loop, tool definitions, prompt |
+| [src/cua/recorder.py](src/cua/recorder.py) | Trajectory → artifact; synthesises locators from the live page |
+| [src/cua/guardrails.py](src/cua/guardrails.py) | Allowlist and risk classification |
+| [src/cua/escalation.py](src/cua/escalation.py) | Intervention requests and the live-session handoff |
+| [src/cua/redaction.py](src/cua/redaction.py) | Secrets and regulated data |
+| [config/policy.yaml](config/policy.yaml) | The guardrail, as reviewable config |
+| [config/signals/](config/signals/) | Per-product runtime error taxonomy |
+| [target_app/](target_app/) | MERIDIAN CORE, the legacy console |
+| [artifacts/](artifacts/) | Saved capabilities |
+| [evidence/](evidence/) | Committed run evidence — see [evidence/README.md](evidence/README.md) |
 
-## Running without live services
+---
 
-`python -m pytest` starts the target application in-process on an ephemeral
-port; nothing external is required. `scripts/make_evidence.py` starts it too if
-it is not already running.
+## Evidence
 
-The one thing that cannot be faked is a discovery run — brief section 4 requires
-a genuine LLM-driven run against a live surface, and that needs a model key.
+Fourteen committed runs, each a folder with `run.jsonl` (ordered trail),
+`result.json` (typed result), and on failure a screenshot plus an accessibility
+snapshot. Start with:
 
-## Design decisions in brief
+| Run | Shows |
+|---|---|
+| `…-discovery` (034705Z) | **The real LLM run.** 8 steps, model transcript, emitted artifact |
+| `…-discovery-verify` | That artifact replaying, no model — what promoted it to `approved` |
+| `…-discovery` (034500Z) | A discovery run that **failed its own verification**, kept deliberately |
+| `…-replay-business-not-found` | A negative answer returned as an outcome, not an error |
+| `…-replay-failure-app-error` | A hard failure with step, expected, observed |
+| `…-manual-handoff-live` | A real human taking over a live session and handing it back |
 
-Full reasoning in [REPORT.md](REPORT.md).
+The kept failure is the instructive one: the model proposed
+`"Savings [REDACTED:account_number] 4210.55"` as proof it had arrived, because
+it had been shown a redacted screen — and the recorder refused to save a
+capability asserting something that does not hold. It's why observations now
+mask secrets but not business data.
 
-- **The accessibility tree is the perception channel, not the DOM.** The
-  console's inputs have no accessible name, so a single locator cannot address
-  them. Every target carries a *ranked list* of strategies plus written
-  reasoning, and replay records which rank actually matched — a fallback is the
-  cheapest drift signal there is.
-- **A run ends exactly three ways**: `success`, `business_outcome`, `failed`.
-  "Recovered" is not a status; recoveries are recorded in the envelope, because
-  by the time a run ends it has still either achieved the goal, learned a
-  business answer, or failed.
-- **Checkpoints and error signals are raced, not sequenced.** Checking success
-  first and looking for errors afterwards misreports a slow "no such member" as
-  a timeout — the exact mistake the brief singles out.
-- **Risk is assigned by policy, never by the model**, from route, action kind
-  and the control being activated. Filling a field is not a write; clicking
-  Submit is.
-- **Irreversible actions route to a human rather than being blocked.** Blocking
-  would make the sub-account flow unrecordable; routing means the flow
-  completes, a person owns the decision, and the approval is in the evidence.
-- **A handoff never creates a new session.** The control token moves; the
-  browser does not. What the human did is captured by watching the live session,
-  not by asking them.
+---
+
+## Notes
+
+- All data, credentials and account numbers are synthetic. `op.demo` /
+  `demo-pass` are printed on the app's own sign-on page.
+- `/__chaos` injects faults for demos and tests. It is deliberately **denied**
+  by the allowlist, so the automation cannot reach it — there is a test that
+  proves a run cannot switch off its own error conditions.
+- Replaying the sub-account capability mutates fixture data; `chaos.py reset`
+  restores it, and the tests reset between runs.

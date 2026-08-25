@@ -44,6 +44,14 @@ def validate(capability: Capability, supplied: dict[str, Any]) -> dict[str, str]
         if name not in supplied or supplied[name] is None:
             if spec.required:
                 problems.append(f"{name!r} is required")
+            else:
+                # An optional input that a step types into is legitimate -- a
+                # nickname field really is optional on the form -- and the
+                # correct behaviour is to type nothing, not to abort. Binding
+                # it to empty here keeps that decision in one place; without
+                # it the step blows up mid-run and gets reported as an
+                # internal error, which blames the wrong party.
+                bound[name] = ""
             continue
         try:
             bound[name] = _coerce(spec, supplied[name])

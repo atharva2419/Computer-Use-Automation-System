@@ -1,0 +1,106 @@
+# Known runtime conditions for the MERIDIAN CORE product (brief 3.3).
+#
+# Why these live here rather than being discovered
+# ------------------------------------------------
+# A discovery run follows the happy path. It signs on, finds the member, reads
+# the balance, and succeeds -- so it never encounters "no such member", never
+# sees a permission denial, and never meets a maintenance interstitial. It
+# cannot record an error model it did not experience, and a model asked to
+# imagine one would be inventing detection rules for pages it has never seen.
+#
+# So the error taxonomy is curated per vendor product and attached to every
+# capability recorded against it. That is also how it would work in
+# production: these conditions are properties of the *application*, not of any
+# one flow, and they are written once by whoever integrates the product and
+# grow as operations discovers new ones.
+#
+# Signals are matched to a capability by `product`, so every capability
+# recorded against meridian-core inherits the same baseline. Step-local
+# signals -- conditions that only mean something at one point in one flow --
+# stay in the capability itself.
+#
+# Next step, not built: a probe phase after discovery that deliberately
+# submits a bad member id to learn the not-found page, so the library can be
+# bootstrapped from observation rather than written by hand.
+
+product: meridian-core
+product_version: "r7.4.1"
+
+signals:
+  - id: member_not_found
+    description: The searched member ID matched no record.
+    detect:
+      kind: text_present
+      frame: {kind: name, value: main}
+      text: NO RECORD FOUND
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: MEMBER_NOT_FOUND
+    message: No member matches the supplied member ID.
+
+  - id: permission_denied
+    description: The record exists but this operator role may not view it.
+    detect:
+      kind: text_present
+      frame: {kind: name, value: main}
+      text: PERMISSION DENIED
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: PERMISSION_DENIED
+    message: >-
+      The member record exists but the automation operator is not entitled to
+      view it. A caller may legitimately need to know this, so it is an outcome
+      rather than a failure -- but it also means the answer was not obtained,
+      and the caller must branch on it.
+
+  - id: system_notice
+    description: Unscheduled maintenance interstitial blocking the flow.
+    detect:
+      kind: text_present
+      frame: {kind: name, value: main}
+      text: SYSTEM NOTICE
+      case_sensitive: false
+    classification: recoverable
+    recovery:
+      kind: dismiss_and_retry
+      max_attempts: 2
+      dismiss:
+        described_as: the Acknowledge button on the system notice interstitial
+        frame: {kind: name, value: main}
+        strategies:
+          - {kind: role_name, role: button, name: Acknowledge, exact: true}
+          - {kind: text, text: Acknowledge, exact: true}
+        rationale: Dismissal control for the maintenance interstitial.
+    message: Dismissed the maintenance interstitial and retried the step.
+
+  - id: session_expired
+    description: Operator sign-on lapsed mid-flow.
+    detect:
+      kind: text_present
+      frame: {kind: name, value: main}
+      text: SESSION EXPIRED
+      case_sensitive: false
+    classification: hard_failure
+    escalate: true
+    message: >-
+      The servicing session expired mid-flow. Re-authenticating unattended is
+      deliberately not automated: it would mean the system holds and replays
+      operator credentials outside the invocation that supplied them, and a
+      blind retry against an unknown rejection risks locking the account. A
+      human re-establishes the session and hands control back.
+
+  - id: app_error
+    description: The servicing subsystem returned a fault page.
+    detect:
+      kind: any_of
+      of:
+        - kind: text_present
+          frame: {kind: name, value: main}
+          text: APPLICATION ERROR
+          case_sensitive: false
+        - kind: text_present
+          frame: {kind: top}
+          text: APPLICATION ERROR
+          case_sensitive: false
+    classification: hard_failure
+    message: The application returned fault MCX-5000.

@@ -1,0 +1,126 @@
+{
+  "run_id": "96461a3bd718",
+  "capability_id": "meridian.member.read_savings_balance_discovered",
+  "capability_version": 1,
+  "started_at": "2026-08-23T03:47:32.494589Z",
+  "finished_at": "2026-08-23T03:47:36.191636Z",
+  "duration_ms": 3697,
+  "steps": [
+    {
+      "step_id": "go_to_the_servicing",
+      "index": 0,
+      "intent": "Go to the servicing console login page",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 1109,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 577,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_passphrase",
+      "index": 2,
+      "intent": "Enter operator passphrase",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 578,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "sign_on_to_the",
+      "index": 3,
+      "intent": "Sign on to the console",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "go_to_member_search",
+      "index": 4,
+      "intent": "Go to Member Search",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "text",
+      "strategy_rank": 0,
+      "duration_ms": 94,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_id_to",
+      "index": 5,
+      "intent": "Enter member ID to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 30,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_member_10001",
+      "index": 6,
+      "intent": "Search for member 10001",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 594,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_member_record_for",
+      "index": 7,
+      "intent": "Open member record for 10001",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    }
+  ],
+  "recoveries": [],
+  "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-08-23T03:47:32.494590Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian.member.read_savings_balance_discovered"
+    }
+  ],
+  "human_touched": false,
+  "evidence_dir": null,
+  "status": "success",
+  "outputs": {
+    "savings_balance": "[REDACTED:restricted float]"
+  },
+  "outputs_written": false,
+  "output_names": [
+    "savings_balance"
+  ]
+}
