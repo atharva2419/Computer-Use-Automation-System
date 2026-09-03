@@ -1,0 +1,114 @@
+# Guardrail policy for the hosted MERIDIAN CORE (brief 3.5).
+#
+# This file is the adapter. Pointing the core at a new target should be a
+# configuration change, not a rewrite -- so everything specific to this
+# application lives here and in config/signals/meridian-hosted.yaml, and
+# nothing under src/cua/ knows this target exists.
+#
+# Selected with --policy on the discover/replay scripts; the shipped
+# config/policy.yaml still governs the local take-home target unchanged.
+
+version: 1
+
+allowlist:
+  origins:
+    - "https://web-sample.interface-hiring.com"
+
+  # Routes taken from the application's own navigation links rather than
+  # guessed. /menu is included because sign-on redirects there -- it returns
+  # 404 on this build, but the automation is legitimately sent to it.
+  routes:
+    - "/"
+    - "/signon"
+    - "/signoff"
+    - "/menu"
+    - "/members"
+    - "/members/*"
+
+  # /settings is the fault-injection console: error rate and forced error
+  # mode. Denied for the same reason the local target's /__chaos is denied --
+  # a run must not be able to switch off the very conditions it is supposed
+  # to detect. Faults are armed out of band by a human or the demo harness.
+  denied_routes:
+    - "/settings*"
+
+  actions:
+    - navigate
+    - click
+    - fill
+    - select
+    - press
+    - wait_for
+
+risk:
+  # First match wins. Risk is keyed on the control being activated, not on
+  # the screen: this application uses a review -> post shape everywhere, so
+  # reaching a confirmation screen is harmless and pressing the button on it
+  # is the consequential act.
+  rules:
+    - name: post an irreversible transaction
+      # Covers "Post Transfer", "Post Hold", "Post New Share" -- every
+      # terminal submit this application exposes is named "Post ...".
+      action: click
+      control: "post*"
+      risk: irreversible
+
+    - name: place an account hold (supervisor-gated, freezes funds)
+      route: "/members/*/hold*"
+      action: click
+      control: "*hold*"
+      risk: irreversible
+
+    - name: amend member contact details
+      # Changes stored data but an operator can edit it back through the same
+      # screen, so it is reversible rather than irreversible.
+      route: "/members/*/update*"
+      action: click
+      control: "*update*"
+      risk: reversible_write
+
+    - name: advance to a confirmation screen
+      # "Continue" moves from the entry form to the review screen. Nothing is
+      # posted, so this stays safe -- keeping the approval set small enough
+      # that approval still means something.
+      action: click
+      control: "continue"
+      risk: safe
+
+    - name: sign on submits credentials but creates nothing
+      route: "/signon"
+      action: click
+      risk: safe
+
+  default: safe
+
+  handling:
+    safe: allow
+    reversible_write: allow
+    irreversible: require_human
+
+  # Discovery is the model exploring an unfamiliar console, so it is held to
+  # at least the replay standard. It may fill forms and reach review screens
+  # freely -- it cannot learn the next screen otherwise -- but posting needs
+  # a person.
+  discovery_handling:
+    safe: allow
+    reversible_write: allow
+    irreversible: require_human
+
+redaction:
+  # Applied to everything written down: logs, evidence, failure excerpts,
+  # escalation records. Declared capability outputs are returned to the
+  # caller unredacted -- they are what was asked for.
+  patterns:
+    - name: share_id
+      # 102777-S0001, 102777-MMKT-3, 100234-CERT-15
+      regex: '\b\d{6}-[A-Z]{2,4}[A-Z0-9]*(?:-\d+)?\b'
+    - name: email
+      regex: '\b[\w.+-]+@[\w-]+\.[\w.]+\b'
+    - name: phone
+      regex: '\b\d{3}-\d{4}\b'
+    - name: ssn
+      regex: '\b\d{3}-\d{2}-\d{4}\b'
+    - name: card
+      regex: '\b(?:\d[ -]?){13,19}\b'

@@ -1,0 +1,143 @@
+# Known runtime conditions for the hosted MERIDIAN CORE (brief 2.2, 3.1).
+#
+# Attached to every capability recorded against this product. These are
+# properties of the *application*, not of any one flow, so they are curated
+# once here rather than rediscovered per capability -- a successful discovery
+# run follows the happy path and never sees an error.
+#
+# Every detection string below was observed on the live application during
+# recon, not inferred from the brief. The brief lists six injectable faults
+# (?inject=<kind> or the System Settings screen) plus natural errors; the
+# mapping to what actually renders is:
+#
+#   inject=validation   400  "TRANSACTION REJECTED"            + natural overdraw
+#   inject=notfound     404  "RECORD NOT FOUND"
+#   inject=permission   403  "SUPERVISOR OVERRIDE REQUIRED"    + teller attempting a hold
+#   inject=timeout      440  "YOUR SESSION HAS TIMED OUT"      + natural idle timeout
+#   inject=maintenance  503  "SCHEDULED MAINTENANCE IN PROGRESS"
+#   inject=server       500  "APPLICATION ERROR"
+#
+# Detection is by on-screen text rather than HTTP status. That is a deliberate
+# choice: all six render distinctive wording, so nothing here needs the
+# Surface protocol to expose status codes -- which would have been a
+# web-specific concept leaking into an interface that is meant to describe
+# desktop applications too.
+#
+# The application is a single document (no frames), so every assertion targets
+# the top document.
+
+product: meridian-hosted
+product_version: "v4.2.1"
+
+signals:
+  - id: member_not_found
+    description: The searched member number or name matched no record.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: RECORD NOT FOUND
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: MEMBER_NOT_FOUND
+    message: No member record matches the supplied identifier.
+
+  - id: transaction_rejected
+    description: >-
+      The host refused the transaction as entered -- an overdraw, an invalid
+      field value, or an injected validation fault.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: TRANSACTION REJECTED
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: TRANSACTION_REJECTED
+    message: >-
+      The host rejected the transaction as entered. Verified against a real
+      overdraw during recon: a transfer of more than the share holds is
+      refused and no funds move, so this is a legitimate answer to the
+      caller's request rather than a breakdown of the automation.
+
+  - id: supervisor_override_required
+    description: The operator profile is not entitled to this function.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: SUPERVISOR OVERRIDE REQUIRED
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: SUPERVISOR_OVERRIDE_REQUIRED
+    message: >-
+      This function needs a supervisor profile. Classified as an outcome
+      rather than a failure because the caller can act on it -- re-invoke with
+      supervisor credentials -- whereas escalating to a human would not help
+      unless that human is themselves a supervisor.
+
+  - id: maintenance_interstitial
+    description: Unscheduled maintenance notice blocking the flow.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: SCHEDULED MAINTENANCE IN PROGRESS
+      case_sensitive: false
+    classification: recoverable
+    recovery:
+      kind: dismiss_and_retry
+      max_attempts: 2
+      dismiss:
+        described_as: the Continue link on the maintenance interstitial
+        frame: {kind: top}
+        strategies:
+          # Role matters here, not just the word. "Continue" is also the
+          # submit *button* on the transfer entry form; addressing this one as
+          # a link keeps a mid-flow dismissal from pressing the wrong control.
+          - {kind: role_name, role: link, name: Continue, exact: true}
+        rationale: >-
+          Dismissal control for the maintenance notice. Identified by role and
+          name because the same word labels a submit button elsewhere in this
+          application.
+    message: Dismissed the maintenance notice and retried the step.
+
+  - id: session_timed_out
+    description: The operator session ended mid-flow.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: YOUR SESSION HAS TIMED OUT
+      case_sensitive: false
+    classification: hard_failure
+    escalate: true
+    message: >-
+      The servicing session ended mid-flow. Re-authenticating unattended is
+      deliberately not automated: it would mean holding and replaying operator
+      credentials outside the invocation that supplied them, and a blind retry
+      against an unknown rejection risks locking the profile. A human
+      re-establishes the session and hands control back.
+
+  - id: application_error
+    description: The host returned an unhandled fault page.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: APPLICATION ERROR
+      case_sensitive: false
+    classification: hard_failure
+    message: >-
+      The application returned an unexpected fault. The page carries a
+      reference code for the help desk; nothing about the flow can be assumed
+      from here, so the run stops.
+
+  - id: signon_rejected
+    description: The supplied operator credentials were refused.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: Invalid operator ID or password
+      case_sensitive: false
+    classification: hard_failure
+    message: >-
+      Sign-on was refused. Treated as a hard failure rather than a business
+      outcome: the caller supplied credentials that do not work, which is a
+      fault in the invocation rather than an answer about a member. Not
+      escalated, because a human operator cannot fix credentials the caller
+      passed in.

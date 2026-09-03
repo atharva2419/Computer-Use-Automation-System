@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 from cua.agent.loop import DiscoveryAgent, resolve_model
 from cua.escalation import ConsoleOperatorHandler
 from cua.evidence import FileEvidenceSink
-from cua.guardrails import PolicyGate
+from cua.guardrails import DEFAULT_POLICY_PATH, PolicyGate
 from cua.recorder import Recorder
 from cua.replay import ReplayEngine
 from cua.schema.capability import AppBinding, ParamSpec
@@ -103,6 +103,15 @@ def main() -> int:
     parser.add_argument("--evidence", nargs="?", const="discovery", default="discovery")
     parser.add_argument("--out", type=Path, default=Path("artifacts"))
     parser.add_argument("--no-verify", action="store_true")
+    parser.add_argument(
+        "--policy",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help="guardrail policy to enforce; defaults to config/policy.yaml. "
+             "Pointing the core at a different target is a policy + signal "
+             "library change, so this is how a new target is selected.",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -133,7 +142,8 @@ def main() -> int:
 
     goal = args.goal.format(**params) if "{" in args.goal else args.goal
 
-    gate = PolicyGate.from_file(discovery=True)
+    policy_path = args.policy or DEFAULT_POLICY_PATH
+    gate = PolicyGate.from_file(policy_path, discovery=True)
     redactor = gate.policy.redactor()
     redactor.learn_secrets(secrets.values())
 
@@ -216,7 +226,7 @@ def main() -> int:
 
     if args.no_verify:
         return 0
-    return _verify(result.capability, bound, gate, redactor, path)
+    return _verify(result.capability, bound, policy_path, redactor, path)
 
 
 def _placeholder(recorder: Recorder) -> Any:
@@ -249,7 +259,7 @@ def _placeholder(recorder: Recorder) -> Any:
     )
 
 
-def _verify(capability, bound, gate, redactor, path: Path) -> int:
+def _verify(capability, bound, policy_path, redactor, path: Path) -> int:
     """Replay what was just recorded, before anyone trusts it.
 
     A model-authored artifact is a hypothesis until it reproduces. This is
@@ -264,7 +274,10 @@ def _verify(capability, bound, gate, redactor, path: Path) -> int:
     session = Session(surface=surface)
     try:
         outcome = ReplayEngine(
-            session, gate=PolicyGate.from_file(), sink=verify_sink, redactor=redactor
+            session,
+            gate=PolicyGate.from_file(policy_path),
+            sink=verify_sink,
+            redactor=redactor,
         ).run(capability, bound)
     finally:
         session.release()

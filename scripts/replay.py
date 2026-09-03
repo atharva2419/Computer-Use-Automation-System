@@ -22,7 +22,7 @@ from typing import Any
 
 from cua.escalation import ConsoleOperatorHandler
 from cua.evidence import FileEvidenceSink
-from cua.guardrails import PolicyGate
+from cua.guardrails import DEFAULT_POLICY_PATH, PolicyGate
 from cua.replay import ReplayEngine
 from cua.schema.capability import Capability
 from cua.session import Session
@@ -119,6 +119,15 @@ def main() -> int:
         help="write a run trail to evidence/runs/<timestamp>-<label>/",
     )
     parser.add_argument(
+        "--policy",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help="guardrail policy to enforce; defaults to config/policy.yaml. "
+             "Pointing the core at a different target is a policy + signal "
+             "library change, so this is how a new target is selected.",
+    )
+    parser.add_argument(
         "--operator",
         action="store_true",
         help="hand the live session to you when the run gets stuck "
@@ -129,7 +138,7 @@ def main() -> int:
     capability = Capability.model_validate_json(args.artifact.read_text("utf-8"))
     supplied = parse_params(args.param)
 
-    gate = PolicyGate.from_file()
+    gate = PolicyGate.from_file(args.policy or DEFAULT_POLICY_PATH)
     redactor = gate.policy.redactor()
 
     sink = None
