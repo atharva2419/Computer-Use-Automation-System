@@ -268,6 +268,9 @@ class DiscoveryAgent:
             self._respond(call, f"That action failed: {exc}")
             return None
 
+        if tool == "select" and target is not None:
+            action = self._stabilise_select(action, target)
+
         self.recorder.record(
             surface=surface,
             step_id=step_id,
@@ -328,6 +331,42 @@ class DiscoveryAgent:
             return target, SelectAction(target=target, value=value)
 
         raise ValueError(f"unsupported action tool {tool!r}")
+
+    def _stabilise_select(self, action: Any, target: Target) -> Any:
+        """Record the option the application identifies, not the one on screen.
+
+        A dropdown's visible label is written for a person and often carries
+        live data with it. This target lists shares as
+        ``102777-MMKT-3 - Money Market ($5.00)`` -- the balance is part of the
+        label. A capability that selects by that text is self-invalidating:
+        posting the transfer changes the balance, so the next run cannot find
+        the option it just used.
+
+        The option's underlying value is the stable identifier, and the model
+        cannot see it -- the accessibility tree exposes labels, not value
+        attributes. So the value is read back off the control after the
+        selection lands, which is the same rule the recorder applies to
+        locators: what gets written down comes from the page, not from the
+        model's description of it.
+
+        A read-back value that matches a supplied argument is then promoted to
+        a parameter reference by the ordinary exact-match rule, so the
+        capability becomes properly reusable rather than pinned to one share.
+        """
+        if getattr(action.value, "kind", None) == "param":
+            return action  # the model already referenced a parameter
+        try:
+            actual, _ = self._surface().read(target, source="value")
+        except SurfaceError:
+            return action  # best effort; keep the label rather than nothing
+        if actual and actual != getattr(action.value, "value", None):
+            action.value = self.recorder.value_ref(actual, None)
+            self._note(
+                "select_value_stabilised",
+                step=target.described_as,
+                recorded=actual,
+            )
+        return action
 
     def _perform(self, tool: str, target: Target | None, action: Any, surface: Surface) -> None:
         if tool == "navigate":

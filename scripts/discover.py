@@ -84,6 +84,43 @@ def build_inputs(
     return specs
 
 
+class RecordingApprover:
+    """Approves risky steps while a capability is being recorded.
+
+    The guardrail stops at an irreversible action and asks for a person. During
+    a recording session that person is the one who launched it -- they chose
+    the target, the member and the amount -- so ``--approve-irreversible`` is
+    their approval, given up front instead of per step.
+
+    It is not a bypass. The gate still classifies and still stops; only the
+    answer is pre-supplied. Every approval is written into the run evidence as
+    an intervention resolved by "recording-operator", so an artifact recorded
+    this way says so. Replay uses a real handler and still halts for a human.
+    """
+
+    def __init__(self, sink: Any = None) -> None:
+        self.sink = sink
+        self.approvals = 0
+
+    def request(self, context: Any) -> Any:
+        from cua.replay import EscalationOutcome
+
+        self.approvals += 1
+        print(f"  {YELLOW}approved{RESET} {DIM}{context.reason}{RESET}")
+        if self.sink is not None:
+            self.sink.note(
+                "recording_operator_approved",
+                step_id=context.step.id,
+                reason=context.reason,
+            )
+        return EscalationOutcome(
+            resolved=True,
+            resolution="resumed",
+            operator="recording-operator",
+            actions=[f"approved a {context.step.risk} step during recording"],
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--goal", required=True)
@@ -100,6 +137,15 @@ def main() -> int:
     parser.add_argument("--budget-seconds", type=int, default=300)
     parser.add_argument("--headed", action="store_true")
     parser.add_argument("--operator", action="store_true")
+    parser.add_argument(
+        "--approve-irreversible",
+        action="store_true",
+        help="stand in for the operator during THIS recording session and "
+             "approve risky steps. The person running discovery is present "
+             "and is giving that approval by passing the flag; it is "
+             "recorded in the evidence like any other intervention. Replay "
+             "is unaffected and still stops for a real human.",
+    )
     parser.add_argument("--evidence", nargs="?", const="discovery", default="discovery")
     parser.add_argument("--out", type=Path, default=Path("artifacts"))
     parser.add_argument("--no-verify", action="store_true")
@@ -162,9 +208,12 @@ def main() -> int:
         headless=not (args.headed or args.operator)
     ).start()
     session = Session(surface=surface)
-    escalation = (
-        ConsoleOperatorHandler(sink=sink, redactor=redactor) if args.operator else None
-    )
+    if args.operator:
+        escalation = ConsoleOperatorHandler(sink=sink, redactor=redactor)
+    elif args.approve_irreversible:
+        escalation = RecordingApprover(sink=sink)
+    else:
+        escalation = None
 
     print(f"{BOLD}discovery{RESET}  model={model}  goal={goal!r}")
     directory = sink.open(_placeholder(recorder), run_kind="discovery")
@@ -226,6 +275,23 @@ def main() -> int:
 
     if args.no_verify:
         return 0
+
+    # Verification means replaying what was just recorded. For a read-only
+    # capability that is free. For one that posts a transfer or places a hold
+    # it would perform the transaction a *second* time, against a real host --
+    # so an irreversible capability is not auto-verified, and does not
+    # auto-promote. It stays a draft until a person approves it, which is the
+    # same rule the guardrail applies to running one.
+    if result.capability.max_risk == "irreversible":
+        print(f"\n{BOLD}not auto-verified{RESET}")
+        print(f"  {DIM}this capability contains an irreversible step, and"
+              f" replaying it to check{RESET}")
+        print(f"  {DIM}that it reproduces would perform that step again."
+              f" Left as{RESET} {YELLOW}draft{RESET}")
+        print(f"  {DIM}for human approval -- a supervised replay, or review of"
+              f" the artifact.{RESET}")
+        return 0
+
     return _verify(result.capability, bound, policy_path, redactor, path)
 
 

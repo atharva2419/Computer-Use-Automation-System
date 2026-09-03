@@ -33,6 +33,7 @@ Everything the model asserts that can be checked, is checked.
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -74,6 +75,26 @@ SIGNAL_LIBRARY_DIR = Path(__file__).resolve().parents[2] / "config" / "signals"
 
 # Attributes worth reading for a last-resort selector, most stable first.
 _FALLBACK_ATTRIBUTES = ("data-testid", "id", "name")
+
+
+# Text that will not mean the same thing on the next run. A checkpoint has to
+# survive the data moving underneath it, so these are refused rather than
+# recorded -- see Recorder._verified_checkpoint.
+_VOLATILE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("a currency amount", re.compile(r"[$£€]\s*\d")),
+    ("a decimal figure", re.compile(r"\b\d+\.\d{2}\b")),
+    ("a date", re.compile(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b")),
+    ("a time", re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")),
+    ("a reference number", re.compile(r"\b[A-Z]{2,4}\d{5,}\b")),
+]
+
+
+def _volatile_reason(text: str) -> str | None:
+    """Why this text is unsafe as a checkpoint, or None if it is stable."""
+    for reason, pattern in _VOLATILE_PATTERNS:
+        if pattern.search(text):
+            return reason
+    return None
 
 
 class RecorderError(RuntimeError):
@@ -298,13 +319,37 @@ class Recorder:
         frame: FrameRef,
         step_id: str,
     ) -> Checkpoint | None:
-        """Accept the model's proposal only if it actually holds right now.
+        """Accept the model's proposal only if it holds now *and* will later.
 
-        This is the guard against a confident, wrong assertion being written
-        into an artifact that then fails in production for a reason nobody can
-        trace back to a sentence a model wrote.
+        Two separate tests, and the second one was learned the hard way.
+
+        **True now.** The guard against a confident, wrong assertion being
+        written into an artifact that then fails in production for a reason
+        nobody can trace back to a sentence a model wrote.
+
+        **Still true later.** A checkpoint that quotes live data passes its
+        own recording and then rots. On a target whose dropdowns read
+        ``102777-MMKT-3 - Money Market ($5.00)``, a model asked what proves the
+        selection worked will naturally quote the option -- balance and all.
+        The capability then invalidates itself: posting the transfer changes
+        the balance, so the next run cannot match its own checkpoint. The
+        take-home target had static demo data, so this never surfaced; a live
+        one with moving balances exposed it immediately.
+
+        Volatile text is therefore refused outright rather than checked, and
+        the refusal is reported. Amounts, dates and reference numbers are
+        *outputs to read*, never evidence that a step worked.
         """
         if not expect_text:
+            return None
+
+        volatile = _volatile_reason(expect_text)
+        if volatile:
+            self.notes.append(
+                f"step {step_id}: discarded proposed checkpoint "
+                f"{expect_text!r} -- contains {volatile}, which changes "
+                "between runs; a checkpoint must stay true, not just be true"
+            )
             return None
 
         from . import assertions  # local import: keeps the schema layer clean

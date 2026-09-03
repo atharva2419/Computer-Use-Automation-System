@@ -1,0 +1,48 @@
+SURFACE URL: https://web-sample.interface-hiring.com/members/102777/transfer/review
+
+--- FRAME name='(top)' url=https://web-sample.interface-hiring.com/members/102777/transfer/review title='Confirm Transfer - Meridian Core' ---
+- table:
+  - rowgroup:
+    - row "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™":
+      - cell "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™"
+    - row "Main Menu · Member Inquiry · System Settings · Sign Off":
+      - cell "Main Menu · Member Inquiry · System Settings · Sign Off":
+        - link "Main Menu":
+          - /url: /menu
+        - text: ·
+        - link "Member Inquiry":
+          - /url: /members
+        - text: ·
+        - link "System Settings":
+          - /url: /settings
+        - text: ·
+        - link "Sign Off":
+          - /url: /signoff
+    - 'row "CONFIRM FUNDS TRANSFER Member: 102777 - Johnson, Katherine From: [REDACTED:share_id] ($1.00) To: [REDACTED:share_id] ($9.00) Amount: $1.00 Memo: capability-recording This will post immediately and cannot be reversed from this screen. Post Transfer Cancel"':
+      - 'cell "CONFIRM FUNDS TRANSFER Member: 102777 - Johnson, Katherine From: [REDACTED:share_id] ($1.00) To: [REDACTED:share_id] ($9.00) Amount: $1.00 Memo: capability-recording This will post immediately and cannot be reversed from this screen. Post Transfer Cancel"':
+        - heading "CONFIRM FUNDS TRANSFER" [level=1]
+        - table:
+          - rowgroup:
+            - 'row "Member: 102777 - Johnson, Katherine"':
+              - cell "Member:"
+              - cell "102777 - Johnson, Katherine"
+            - 'row "From: [REDACTED:share_id] ($1.00)"':
+              - cell "From:"
+              - cell "[REDACTED:share_id] ($1.00)"
+            - 'row "To: [REDACTED:share_id] ($9.00)"':
+              - cell "To:"
+              - cell "[REDACTED:share_id] ($9.00)"
+            - 'row "Amount: $1.00"':
+              - cell "Amount:"
+              - cell "$1.00"
+            - 'row "Memo: capability-recording"':
+              - cell "Memo:"
+              - cell "capability-recording"
+        - text: This will post immediately and cannot be reversed from this screen.
+        - button "Post Transfer"
+        - link "Cancel":
+          - /url: /members/102777/transfer
+    - row "OPR TELLER1 | BR MAIN-001 | 09/03/2026 20:33:00 | SID F8A75C66":
+      - cell "OPR TELLER1 | BR MAIN-001 | 09/03/2026 20:33:00 | SID F8A75C66"
+    - row "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel":
+      - cell "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel"

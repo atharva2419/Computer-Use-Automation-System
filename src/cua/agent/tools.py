@@ -30,7 +30,13 @@ EXPECT_TEXT_DESCRIPTION = (
     "Short, distinctive text you expect to see once this action has worked. "
     "It is verified against the resulting page and, if it holds, becomes the "
     "step's checkpoint on replay. A proposal that does not hold is discarded, "
-    "so prefer something you can actually see over something plausible."
+    "so prefer something you can actually see over something plausible.\n"
+    "Choose text that will still be true months from now, on a different "
+    "record: a heading, a field label, a screen title. Never include a value "
+    "that changes between runs -- a balance, an amount, a date, a reference "
+    "number, a member's name. Those are outputs to read, not evidence that a "
+    "step worked, and a checkpoint containing one is wrong the moment the "
+    "data moves."
 )
 
 TOOLS: list[dict[str, Any]] = [
@@ -170,9 +176,15 @@ TOOLS: list[dict[str, Any]] = [
                 "success_text": {
                     "type": "string",
                     "description": (
-                        "Distinctive text on the final screen that proves the "
-                        "goal was reached. Verified before the capability is "
-                        "recorded; if it does not hold, nothing is saved."
+                        "A SHORT, distinctive phrase -- a heading or a few "
+                        "words -- that appears verbatim on the final screen "
+                        "and proves the goal was reached. Quote it exactly as "
+                        "shown; do not join text from different parts of the "
+                        "page, do not abbreviate with an ellipsis, and do not "
+                        "include values that change between runs. It is "
+                        "checked against the page before anything is saved, "
+                        "and a phrase that does not hold means nothing is "
+                        "recorded at all."
                     ),
                 },
                 "frame": {"type": "string", "description": FRAME_DESCRIPTION},
