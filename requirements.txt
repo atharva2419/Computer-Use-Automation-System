@@ -5,3 +5,8 @@ anthropic==1.0.0
 python-dotenv==1.0.1
 pyyaml==6.0.2
 pytest==8.3.3
+
+# Capability API, chatbot and dashboard (adaptation project)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
