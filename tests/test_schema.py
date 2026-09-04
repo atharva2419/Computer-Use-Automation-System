@@ -137,18 +137,38 @@ def test_rejects_duplicate_step_ids():
         _minimal(steps=[step, step.model_copy()])
 
 
-def test_rejects_duplicate_outcome_codes():
-    def sig(sid: str) -> SignalRule:
-        return SignalRule(
-            id=sid,
-            description="d",
-            detect=TextPresent(frame=TOP, text="X"),
-            classification="business_outcome",
-            outcome_code="SAME",
-        )
+def _outcome_signal(sid: str, text: str = "X", code: str = "SAME") -> SignalRule:
+    return SignalRule(
+        id=sid,
+        description="d",
+        detect=TextPresent(frame=TOP, text=text),
+        classification="business_outcome",
+        outcome_code=code,
+    )
 
-    with pytest.raises(ValidationError, match="outcome codes must be unique"):
-        _minimal(signals=[sig("a"), sig("b")])
+
+def test_rejects_duplicate_signal_ids():
+    """Ids name a detection, and evidence refers to them."""
+    with pytest.raises(ValidationError, match="signal ids must be unique"):
+        _minimal(signals=[_outcome_signal("a"), _outcome_signal("a", text="Y")])
+
+
+def test_allows_one_outcome_code_from_several_signals():
+    """One business condition can surface on more than one screen.
+
+    The hosted console reports a missing member two ways -- inline on the
+    search screen, and as a full Record Not Found page on retrieval. Both mean
+    MEMBER_NOT_FOUND, and the caller has no reason to branch between them, so
+    requiring distinct codes would force either a lost detection or an
+    invented distinction.
+    """
+    capability = _minimal(
+        signals=[
+            _outcome_signal("not_found_page", text="RECORD NOT FOUND"),
+            _outcome_signal("search_empty", text="No member records matched"),
+        ]
+    )
+    assert [s.outcome_code for s in capability.signals] == ["SAME", "SAME"]
 
 
 # --- signal coherence -------------------------------------------------------

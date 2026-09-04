@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Capabilities</h2>
+
+{# One catalog, more than one target application. The filter is here because
+   the same replay engine drives both -- a capability recorded against the
+   hosted console and one recorded against the local app differ only in the
+   artifact and the policy file, which is the whole claim of the adaptation. #}
+{% if products | length > 1 %}
+<div style="display:flex; gap:8px; margin-bottom:13px; flex-wrap:wrap; align-items:baseline">
+  <a href="/ui" class="badge {{ 'b-info' if not selected else 'b-dim' }}"
+     style="text-decoration:none">all targets</a>
+  {% for p in products %}
+    <a href="/ui?product={{ p }}"
+       class="badge {{ 'b-info' if selected == p else 'b-dim' }}"
+       style="text-decoration:none">{{ p }}</a>
+  {% endfor %}
+  <span class="dim" style="font-size:12px; margin-left:6px">
+    same engine, same policy machinery &mdash; only the artifact and the config differ
+  </span>
+</div>
+{% endif %}
+
+{% if not capabilities %}
+  <div class="panel pad dim">No artifacts loaded from {{ artifact_dir }}.</div>
+{% endif %}
+
+<div class="grid">
+{% for c in capabilities %}
+  <div class="panel pad">
+    <div style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap">
+      <strong class="mono">{{ c.capability_id }}</strong>
+      <span class="badge {{ 'b-ok' if c.approval == 'approved' else 'b-warn' }}">{{ c.approval }}</span>
+      <span class="badge {{ 'b-bad' if c.max_risk == 'irreversible' else ('b-warn' if c.max_risk == 'reversible_write' else 'b-dim') }}">{{ c.max_risk }}</span>
+      <span class="dim" style="margin-left:auto; font-size:12px">
+        {{ c.product }} &middot; v{{ c.version }} &middot; {{ c.steps }} steps</span>
+    </div>
+    <p class="dim" style="margin:9px 0 2px">{{ c.description }}</p>
+
+    {% if c.business_outcomes %}
+      <p style="margin:9px 0 0; font-size:12px" class="dim">
+        Outcomes:
+        {% for o in c.business_outcomes %}<span class="badge b-info mono">{{ o.code }}</span> {% endfor %}
+      </p>
+    {% endif %}
+
+    <form class="invoke" data-name="{{ c.capability_id }}" data-draft="{{ 0 if c.invocable_unattended else 1 }}">
+      {% for field, spec in c.input_schema.properties.items() %}
+        <label for="{{ c.capability_id }}--{{ field }}">
+          {{ field }}{% if field in c.input_schema.required %} *{% endif %}
+          {% if spec.writeOnly %}<span class="badge b-warn" style="margin-left:6px">secret</span>{% endif %}
+        </label>
+        <input id="{{ c.capability_id }}--{{ field }}" name="{{ field }}"
+               type="{{ 'password' if spec.writeOnly else 'text' }}"
+               value="{{ spec.examples[0] if spec.examples else '' }}"
+               placeholder="{{ spec.description }}">
+      {% endfor %}
+
+      {% if not c.invocable_unattended %}
+        <div class="note" style="margin-top:14px">
+          <strong>Draft &mdash; not approved for unattended use.</strong>
+          This capability posts an irreversible transaction, so it was never
+          auto-verified: verifying it would perform the transaction again. The
+          API refuses it unless you declare that an operator is watching.
+          <label style="margin-top:9px; text-transform:none; letter-spacing:0; color:var(--ink)">
+            <input type="checkbox" class="supervised" style="width:auto; margin-right:7px">
+            An operator is supervising this run
+          </label>
+        </div>
+      {% endif %}
+
+      <div style="margin-top:14px; display:flex; align-items:center; gap:11px">
+        <button type="submit">Invoke</button>
+        <span class="result dim" style="font-size:12px"></span>
+      </div>
+    </form>
+  </div>
+{% endfor %}
+</div>
+
+<h2>Recent runs</h2>
+<div class="panel">
+  <table id="runs">
+    <thead><tr><th>Run</th><th>Capability</th><th>Status</th><th>Steps</th><th>Started</th></tr></thead>
+    <tbody><tr><td colspan="5" class="dim" style="padding:14px">Loading&hellip;</td></tr></tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Every action here goes through the public API. The dashboard is a client of
+// the same endpoints an agent would call -- it has no privileged path, so it
+// cannot do anything the guardrails would refuse to an ordinary caller.
+document.querySelectorAll("form.invoke").forEach(form => {
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const out = form.querySelector(".result");
+    const btn = form.querySelector("button[type=submit]");
+    const args = {};
+    form.querySelectorAll("input[name]").forEach(i => {
+      if (i.value !== "") args[i.name] = i.value;
+    });
+    const box = form.querySelector(".supervised");
+    btn.disabled = true;
+    out.textContent = "submitting...";
+    try {
+      const res = await fetch("/capabilities/" + encodeURIComponent(form.dataset.name) + "/invoke", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({arguments: args, supervised: !!(box && box.checked)}),
+      });
+      const body = await res.json();
+      if (res.status === 202) {
+        location.href = "/ui/runs/" + body.run_id;
+        return;
+      }
+      // A refusal is shown in full rather than as "error": the reason the
+      // guardrail gives is the interesting part of the response.
+      out.innerHTML = '<span class="b-bad">' + res.status + "</span> " + esc(body.detail || "");
+      out.className = "result";
+    } catch (e) {
+      out.textContent = String(e);
+    }
+    btn.disabled = false;
+  });
+});
+
+async function loadRuns() {
+  const body = document.querySelector("#runs tbody");
+  try {
+    const runs = (await (await fetch("/runs?limit=15")).json()).runs;
+    if (!runs.length) {
+      body.innerHTML = '<tr><td colspan="5" class="dim" style="padding:14px">No runs yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = runs.map(r => "<tr>"
+      + '<td><a class="mono" href="/ui/runs/' + r.run_id + '">' + r.run_id + "</a></td>"
+      + '<td class="mono">' + esc(r.capability_id) + "</td>"
+      + "<td>" + badge(r.status) + "</td>"
+      + "<td>" + r.steps.length + "</td>"
+      + '<td class="dim mono">' + esc((r.started_at || r.submitted_at || "").replace("T", " ").replace("+00:00", "")) + "</td>"
+      + "</tr>").join("");
+  } catch (e) { /* the page is still usable without the run list */ }
+}
+loadRuns();
+setInterval(loadRuns, 3000);
+</script>
+{% endblock %}

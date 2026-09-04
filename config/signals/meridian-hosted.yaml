@@ -31,11 +31,35 @@ product_version: "v4.2.1"
 
 signals:
   - id: member_not_found
-    description: The searched member number or name matched no record.
+    description: >-
+      The host returned its Record Not Found screen. This is the injected
+      fault (?inject=notfound) and the wording used when a record is missing
+      at the point of retrieval rather than at search time.
     detect:
       kind: text_present
       frame: {kind: top}
       text: RECORD NOT FOUND
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: MEMBER_NOT_FOUND
+    message: No member record matches the supplied identifier.
+
+  # The same business condition, worded differently. The search screen reports
+  # an empty result inline rather than routing to the Record Not Found page, so
+  # matching only the latter let a missing member fall through to a locator
+  # failure -- the right answer ("no such member") reported as the wrong kind
+  # of thing ("the automation broke"). Two detections, one outcome code, so the
+  # caller still branches on a single value.
+  #
+  # Detected on the sentence, not on the "Try member numbers ..." hint beside
+  # it: that hint is also rendered on a *successful* search, and would have
+  # matched every lookup that worked.
+  - id: member_search_empty
+    description: A member search completed and matched no records.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: No member records matched your search
       case_sensitive: false
     classification: business_outcome
     outcome_code: MEMBER_NOT_FOUND

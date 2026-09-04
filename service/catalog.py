@@ -110,14 +110,28 @@ class CatalogEntry:
             "output_schema": self.output_schema,
             # What the caller may get back other than success. Publishing the
             # outcome codes is what lets an agent branch without parsing prose.
-            "business_outcomes": [
-                {"code": s.outcome_code, "meaning": s.description}
-                for s in cap.signals
-                if s.classification == "business_outcome" and s.outcome_code
-            ],
+            # Deduplicated by code: several signals may detect one condition on
+            # different screens, but the caller branches on the code, so the
+            # catalog advertises each code once.
+            "business_outcomes": _outcomes(cap),
             "steps": len(cap.steps),
             "tags": cap.tags,
         }
+
+
+def _outcomes(capability: Capability) -> list[dict[str, str]]:
+    """The distinct business outcomes a caller may receive.
+
+    First description wins for a given code. Signal order in the artifact is
+    the order they are evaluated, so the first is the primary phrasing of the
+    condition and the later ones are alternate detections of it.
+    """
+    seen: dict[str, str] = {}
+    for signal in capability.signals:
+        if signal.classification != "business_outcome" or not signal.outcome_code:
+            continue
+        seen.setdefault(signal.outcome_code, signal.description)
+    return [{"code": code, "meaning": meaning} for code, meaning in seen.items()]
 
 
 def _property_for(spec: ParamSpec) -> dict[str, Any]:

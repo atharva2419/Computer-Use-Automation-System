@@ -422,9 +422,17 @@ class Capability(_Strict):
                     f"output {out.name!r} refers to unknown step {out.after_step!r}"
                 )
 
-        codes = [s.outcome_code for s in self.signals if s.outcome_code]
-        if len(set(codes)) != len(codes):
-            raise ValueError("outcome codes must be unique within a capability")
+        # Signal *ids* must be unique -- they name a detection, and evidence
+        # refers to them. Outcome *codes* deliberately need not be: a code is
+        # the caller's vocabulary for a business condition, and one condition
+        # can surface on more than one screen. The hosted console reports a
+        # missing member two ways -- an inline "no records matched" on the
+        # search screen, and a full Record Not Found page on retrieval -- and
+        # forcing distinct codes there would either lose a detection or invent
+        # a distinction the caller has no reason to branch on.
+        signal_ids = [s.id for s in self.signals]
+        if len(set(signal_ids)) != len(signal_ids):
+            raise ValueError("signal ids must be unique within a capability")
         return self
 
     # -- convenience -------------------------------------------------------

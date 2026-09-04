@@ -26,7 +26,15 @@ from cua.agent.tools import TOOLS, tool_names
 from cua.guardrails import Policy, PolicyGate
 from cua.recorder import Recorder, load_signal_library, step_id_for
 from cua.replay import ReplayEngine
-from cua.schema.capability import AppBinding, ParamSpec
+from cua.schema.capability import (
+    AppBinding,
+    Checkpoint,
+    ClickAction,
+    ParamSpec,
+    Step,
+    Target,
+)
+from cua.schema import FrameRef, RoleNameStrategy, TextPresent
 from cua.session import Session
 from cua.surface.web import PlaywrightWebSurface
 from target_app import app as target_module
@@ -425,3 +433,92 @@ def test_every_tool_maps_to_something_the_loop_handles() -> None:
         assert "intent" in tool["input_schema"]["properties"] or tool["name"] in (
             "screenshot", "done", "stuck",
         ), f"{tool['name']} should ask for an intent"
+
+
+# --- invocation-specific checkpoints ----------------------------------------
+#
+# The third checkpoint test, and the one no pattern can catch. A checkpoint
+# that quotes the *answer* -- the member's name, the balance that was read --
+# passes its own recording and then works for exactly one set of arguments.
+
+
+def _bare_recorder(bound: dict[str, str] | None = None) -> Recorder:
+    return Recorder(
+        capability_id="t.cap",
+        name="t",
+        goal="g",
+        app=AppBinding(product="t", entry_url="http://localhost/"),
+        inputs=[
+            ParamSpec(name="member_id", type="string", example="102777"),
+            ParamSpec(name="operator_password", type="string", secret=True),
+        ],
+        bound=bound or {"member_id": "102777", "operator_password": "hunter2"},
+    )
+
+
+def _step_with(text: str, step_id: str = "s1") -> Step:
+    return Step(
+        id=step_id,
+        intent="do a thing",
+        action=ClickAction(
+            target=Target(
+                described_as="a button",
+                frame=FrameRef(),
+                strategies=[RoleNameStrategy(role="button", name="Go")],
+            )
+        ),
+        checkpoint=Checkpoint(
+            description=f"{text!r} is present.",
+            assertion=TextPresent(frame=FrameRef(), text=text),
+        ),
+    )
+
+
+def test_drops_checkpoint_quoting_a_read_output():
+    """The name read off the record cannot also prove the record opened."""
+    recorder = _bare_recorder()
+    recorder._observed_outputs.append("Johnson, Katherine")
+    recorder.steps.append(_step_with("Johnson, Katherine"))
+
+    recorder._drop_invocation_specific_checkpoints()
+
+    assert recorder.steps[0].checkpoint is None
+    assert "Johnson, Katherine" in recorder.notes[0]
+    assert "one member" in recorder.notes[0]
+
+
+def test_drops_checkpoint_quoting_a_fragment_of_an_output():
+    """Quoting half the cell pins the capability just as firmly."""
+    recorder = _bare_recorder()
+    recorder._observed_outputs.append("Johnson, Katherine")
+    recorder.steps.append(_step_with("Johnson"))
+
+    recorder._drop_invocation_specific_checkpoints()
+    assert recorder.steps[0].checkpoint is None
+
+
+def test_drops_checkpoint_quoting_an_argument():
+    """The member number supplied for the recording is equally invocation-specific."""
+    recorder = _bare_recorder()
+    recorder.steps.append(_step_with("Member 102777"))
+
+    recorder._drop_invocation_specific_checkpoints()
+    assert recorder.steps[0].checkpoint is None
+
+
+def test_keeps_structural_checkpoint():
+    """A heading is true for every member, so it survives."""
+    recorder = _bare_recorder()
+    recorder._observed_outputs.append("Johnson, Katherine")
+    recorder.steps.append(_step_with("MEMBER RECORD"))
+
+    recorder._drop_invocation_specific_checkpoints()
+
+    assert recorder.steps[0].checkpoint is not None
+    assert recorder.notes == []
+
+
+def test_secret_arguments_are_never_compared_against():
+    """A credential is excluded from the audit, not matched against it."""
+    recorder = _bare_recorder()
+    assert "hunter2" not in recorder._invocation_values()

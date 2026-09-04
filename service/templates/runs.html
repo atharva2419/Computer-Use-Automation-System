@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+
+<h2>Run history</h2>
+<div class="panel">
+  <table id="runs">
+    <thead><tr>
+      <th>Run</th><th>Capability</th><th>Status</th>
+      <th style="width:60px">Steps</th><th>Outcome</th><th>Started</th>
+    </tr></thead>
+    <tbody><tr><td colspan="6" class="dim" style="padding:14px">Loading&hellip;</td></tr></tbody>
+  </table>
+</div>
+<p class="dim" style="margin-top:12px; font-size:12px">
+  Held in memory for the life of the service. The durable record of every run
+  is the evidence directory it wrote, linked from each run's page.
+</p>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadRuns() {
+  const body = document.querySelector("#runs tbody");
+  let runs;
+  try { runs = (await (await fetch("/runs?limit=100")).json()).runs; }
+  catch (e) { return; }
+  if (!runs.length) {
+    body.innerHTML = '<tr><td colspan="6" class="dim" style="padding:14px">'
+      + 'No runs yet. <a href="/ui">Invoke a capability</a> to start one.</td></tr>';
+    return;
+  }
+  body.innerHTML = runs.map(r => "<tr>"
+    + '<td><a class="mono" href="/ui/runs/' + r.run_id + '">' + r.run_id + "</a></td>"
+    + '<td class="mono">' + esc(r.capability_id) + "</td>"
+    + "<td>" + badge(r.status) + "</td>"
+    + '<td class="mono">' + r.steps.length + "</td>"
+    + '<td class="mono">' + (r.outcome_code
+        ? '<span class="badge b-info">' + esc(r.outcome_code) + "</span>"
+        : '<span class="dim">&mdash;</span>') + "</td>"
+    + '<td class="dim mono">'
+    + esc((r.started_at || r.submitted_at || "").replace("T", " ").replace("+00:00", ""))
+    + "</td></tr>").join("");
+}
+loadRuns();
+setInterval(loadRuns, 3000);
+</script>
+{% endblock %}

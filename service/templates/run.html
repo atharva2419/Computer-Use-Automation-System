@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run_id }}{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:baseline; gap:11px; margin-bottom:16px; flex-wrap:wrap">
+  <a href="/ui" class="dim">&larr; Capabilities</a>
+  <strong class="mono" id="cap"></strong>
+  <span id="status-badge"></span>
+  <span class="dim mono" style="margin-left:auto; font-size:12px">run {{ run_id }}</span>
+</div>
+
+<!-- Escalation. Hidden until the run stops for a person; this is the only
+     control on the page that changes anything, and it posts to the same
+     /runs/{id}/decision endpoint the API exposes to every caller. -->
+<div id="escalation" class="panel pad" style="display:none; border-color:var(--warn); margin-bottom:16px">
+  <div style="display:flex; align-items:baseline; gap:9px">
+    <strong style="color:var(--warn)">Waiting for a human</strong>
+    <span class="badge b-warn mono" id="esc-signal"></span>
+    <span class="dim mono" id="esc-step" style="margin-left:auto; font-size:12px"></span>
+  </div>
+  <p id="esc-reason" style="margin:11px 0 0"></p>
+  <div id="esc-observed-wrap" style="margin-top:11px; display:none">
+    <label>Observed on screen</label>
+    <div class="panel pad" style="background:var(--panel2)"><pre id="esc-observed"></pre></div>
+  </div>
+  <div id="esc-controls" style="margin-top:15px; display:flex; align-items:flex-end; gap:11px; flex-wrap:wrap">
+    <div style="flex:1; min-width:240px">
+      <label for="resume">Resume at step</label>
+      <select id="resume"></select>
+    </div>
+    <button id="approve">Approve &amp; resume</button>
+    <button id="abort" class="danger">Abort run</button>
+  </div>
+  <p class="dim" style="margin:11px 0 0; font-size:12px">
+    The browser is open and paused, holding the control token. Recovering the
+    session can move the flow, so you say where to pick up.
+  </p>
+  <p id="esc-resolved" class="dim" style="margin:11px 0 0; display:none"></p>
+</div>
+
+<div class="grid">
+  <div class="panel pad">
+    <h2 style="margin-top:0">Result</h2>
+    <dl class="cols" id="summary"></dl>
+    <div id="outputs-wrap" style="margin-top:15px; display:none">
+      <label>Typed outputs</label>
+      <div class="panel pad" style="background:var(--panel2)"><pre id="outputs"></pre></div>
+    </div>
+    <div id="error-wrap" style="margin-top:15px; display:none">
+      <label>Failure detail</label>
+      <div class="panel pad" style="background:var(--panel2)"><pre id="error"></pre></div>
+    </div>
+  </div>
+
+  <div class="panel pad">
+    <h2 style="margin-top:0">Evidence</h2>
+    <p class="dim" style="margin:0 0 11px; font-size:12px">
+      Written for every run, not only failures. Values are redacted on the way in.
+    </p>
+    <ul id="evidence" class="mono" style="margin:0; padding-left:19px; font-size:13px"></ul>
+    <img id="shot" alt="Screen at the point of failure" style="display:none; margin-top:13px;
+         width:100%; border:1px solid var(--line); border-radius:6px">
+  </div>
+</div>
+
+<h2>Steps</h2>
+<div class="panel">
+  <table>
+    <thead><tr>
+      <th style="width:38px">#</th><th>Step</th><th>Intent</th>
+      <th>Resolved by</th><th style="width:56px">Rank</th>
+      <th style="width:74px">Checkpoint</th><th style="width:66px">Status</th><th style="width:66px">Time</th>
+    </tr></thead>
+    <tbody id="steps"><tr><td colspan="8" class="dim" style="padding:14px">Waiting&hellip;</td></tr></tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const RUN_ID = {{ run_id | tojson }};
+const TERMINAL = ["success", "failed", "business_outcome", "rejected"];
+const DASH = "&mdash;";
+let timer = null;
+
+function renderSteps(steps) {
+  const body = document.getElementById("steps");
+  if (!steps.length) return;
+  body.innerHTML = steps.map(s => "<tr>"
+    + '<td class="dim mono">' + s.index + "</td>"
+    + '<td class="mono">' + esc(s.step_id) + "</td>"
+    + '<td class="dim">' + esc(s.intent) + "</td>"
+    // Which locator strategy actually matched, and how far down the ranked
+    // list it sat. Rank 0 means the recorded first choice still works.
+    + '<td class="mono">' + (s.resolved_by ? esc(s.resolved_by) : '<span class="dim">' + DASH + "</span>") + "</td>"
+    + '<td class="mono">' + (s.strategy_rank === null ? '<span class="dim">' + DASH + "</span>"
+        : (s.strategy_rank === 0 ? "0" : '<span class="b-warn">' + s.strategy_rank + "</span>")) + "</td>"
+    + "<td>" + (s.checkpoint_ok === null ? '<span class="dim">' + DASH + "</span>"
+        : (s.checkpoint_ok ? '<span class="b-ok">pass</span>' : '<span class="b-bad">fail</span>')) + "</td>"
+    + "<td>" + (s.status === "ok" ? '<span class="b-ok">ok</span>'
+        : '<span class="b-bad">' + esc(s.status) + "</span>") + "</td>"
+    + '<td class="dim mono">' + (s.duration_ms === null ? "" : s.duration_ms + "ms") + "</td>"
+    + "</tr>").join("");
+}
+
+function renderEscalation(run) {
+  const box = document.getElementById("escalation");
+  const iv = run.intervention;
+  if (!iv) { box.style.display = "none"; return; }
+  box.style.display = "block";
+
+  document.getElementById("esc-signal").textContent = iv.signal_id || "policy";
+  document.getElementById("esc-step").textContent =
+    "step " + (iv.step_index === undefined ? "?" : iv.step_index) + " / " + (iv.step_id || "");
+  document.getElementById("esc-reason").textContent = iv.reason || iv.intent || "";
+
+  if (iv.observed) {
+    document.getElementById("esc-observed-wrap").style.display = "block";
+    document.getElementById("esc-observed").textContent = iv.observed;
+  }
+
+  const pending = run.status === "awaiting_operator";
+  document.getElementById("esc-controls").style.display = pending ? "flex" : "none";
+  const resolved = document.getElementById("esc-resolved");
+  if (!pending) {
+    const acted = iv.human_actions && iv.human_actions.length
+      ? " Observed while the operator held the session: " + iv.human_actions.join("; ")
+      : "";
+    resolved.style.display = "block";
+    resolved.textContent = "Resolution: " + (iv.resolution || "pending") + "." + acted;
+    box.style.borderColor = "var(--line)";
+    return;
+  }
+  const sel = document.getElementById("resume");
+  if (!sel.options.length) {
+    const steps = iv.resumable_steps || [];
+    sel.innerHTML = '<option value="">Retry the step that stopped</option>'
+      + steps.map(s => '<option value="' + esc(s) + '">' + esc(s) + "</option>").join("");
+  }
+}
+
+async function decide(approve) {
+  const sel = document.getElementById("resume");
+  document.getElementById("approve").disabled = true;
+  document.getElementById("abort").disabled = true;
+  await fetch("/runs/" + RUN_ID + "/decision", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({approve: approve, resume_from: sel.value || null}),
+  });
+  setTimeout(poll, 400);
+}
+document.getElementById("approve").onclick = () => decide(true);
+document.getElementById("abort").onclick = () => decide(false);
+
+async function poll() {
+  let run;
+  try { run = await (await fetch("/runs/" + RUN_ID)).json(); }
+  catch (e) { return; }
+
+  document.getElementById("cap").textContent = run.capability_id;
+  document.getElementById("status-badge").innerHTML = badge(run.status);
+
+  const rows = [["Status", run.status], ["Submitted", run.submitted_at]];
+  if (run.finished_at) rows.push(["Finished", run.finished_at]);
+  if (run.outcome_code) rows.push(["Outcome code", run.outcome_code]);
+  if (run.message) rows.push(["Message", run.message]);
+  // Arguments are shown exactly as the service holds them, secrets already
+  // replaced -- the dashboard never sees a credential to leak.
+  for (const [k, v] of Object.entries(run.arguments || {})) rows.push(["arg " + k, v]);
+  document.getElementById("summary").innerHTML =
+    rows.map(kv => "<dt>" + esc(kv[0]) + "</dt><dd>" + esc(kv[1]) + "</dd>").join("");
+
+  if (Object.keys(run.outputs || {}).length) {
+    document.getElementById("outputs-wrap").style.display = "block";
+    document.getElementById("outputs").textContent = JSON.stringify(run.outputs, null, 2);
+  }
+  if (run.error) {
+    document.getElementById("error-wrap").style.display = "block";
+    document.getElementById("error").textContent = JSON.stringify(run.error, null, 2);
+  }
+
+  renderSteps(run.steps || []);
+  renderEscalation(run);
+
+  if (TERMINAL.includes(run.status)) {
+    clearInterval(timer);
+    loadEvidence();
+  }
+}
+
+// Asked for rather than assumed: a run that succeeded wrote no screenshot and
+// no observation dump, and links to files that do not exist would overstate
+// what the evidence covers.
+async function loadEvidence() {
+  const ev = document.getElementById("evidence");
+  if (ev.children.length) return;
+  let data;
+  try { data = await (await fetch("/runs/" + RUN_ID + "/evidence")).json(); }
+  catch (e) { return; }
+
+  ev.innerHTML = (data.files || []).map(f =>
+    '<li><a href="/runs/' + RUN_ID + "/evidence/" + encodeURIComponent(f.name)
+    + '" target="_blank">' + esc(f.name) + "</a>"
+    + '<span class="dim"> &middot; ' + f.bytes + " b</span></li>").join("")
+    + '<li class="dim" style="list-style:none; margin-left:-19px; margin-top:7px">'
+    + esc(data.directory || "") + "</li>";
+
+  const shot = (data.files || []).find(f => f.name.endsWith(".png"));
+  if (shot) {
+    const img = document.getElementById("shot");
+    img.src = "/runs/" + RUN_ID + "/evidence/" + encodeURIComponent(shot.name);
+    img.style.display = "block";
+  }
+}
+poll();
+timer = setInterval(poll, 1500);
+</script>
+{% endblock %}

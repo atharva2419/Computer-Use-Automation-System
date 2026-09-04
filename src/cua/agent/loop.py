@@ -419,6 +419,10 @@ class DiscoveryAgent:
             description=args.get("description", ""),
             target=target,
             after_step=self.recorder.steps[-1].id if self.recorder.steps else None,
+            # What this reading actually said, so the recorder can tell at
+            # emission whether a checkpoint quoted the answer instead of
+            # proving the step. Audited, then dropped -- never recorded.
+            observed=value,
         )
         self._note("output_declared", name=args["output_name"])
         # The value goes back to the model unredacted -- it needs to confirm it

@@ -97,6 +97,29 @@ def _volatile_reason(text: str) -> str | None:
     return None
 
 
+def _quoted_value(text: str, values: list[str]) -> str | None:
+    """The invocation-specific value this checkpoint text quotes, if any.
+
+    Compared case-insensitively and in both directions: the model may quote a
+    whole cell (``"Johnson, Katherine"``) or a fragment of one (``"Johnson"``),
+    and either way the checkpoint is pinned to the record that happened to be
+    open during the recording.
+
+    Very short values are ignored. A one- or two-character reading is as
+    likely to be a coincidence inside ordinary screen furniture as a real
+    quotation, and discarding good checkpoints on a false match costs more
+    than the rare miss.
+    """
+    haystack = text.casefold()
+    for value in values:
+        if len(value) < 4:
+            continue
+        folded = value.casefold()
+        if folded in haystack or haystack in folded:
+            return value
+    return None
+
+
 class RecorderError(RuntimeError):
     """The trajectory cannot be turned into a valid capability."""
 
@@ -145,6 +168,9 @@ class Recorder:
         self.steps: list[Step] = []
         self.outputs: list[OutputSpec] = []
         self.notes: list[str] = []
+        # Values this recording read off the screen as outputs. Held for the
+        # emission-time checkpoint audit, then dropped.
+        self._observed_outputs: list[str] = []
 
     # -- recording ---------------------------------------------------------
 
@@ -180,6 +206,7 @@ class Recorder:
         target: Target,
         after_step: str | None,
         sensitivity: str = "restricted",
+        observed: str | None = None,
     ) -> None:
         transform = Transform(kind="money" if type_ == "money" else "strip")
         self.outputs.append(
@@ -193,6 +220,11 @@ class Recorder:
                 sensitivity=sensitivity,  # type: ignore[arg-type]
             )
         )
+        # Kept only to audit the checkpoints at emission -- see _invocation_
+        # specific. Never written to the artifact: it is one member's data,
+        # observed once, and has no business outliving the recording.
+        if observed and observed.strip():
+            self._observed_outputs.append(observed.strip())
 
     # -- value binding -----------------------------------------------------
 
@@ -369,6 +401,59 @@ class Recorder:
 
     # -- emission ----------------------------------------------------------
 
+    def _invocation_values(self) -> list[str]:
+        """Everything on screen that belonged to *this* recording specifically.
+
+        The non-secret arguments it was driven with, and the values it read
+        back as outputs. Secrets are excluded because they are never compared
+        against -- and a checkpoint quoting one would be a far worse problem
+        than a brittle assertion.
+        """
+        return [*self._by_value.keys(), *self._observed_outputs]
+
+    def _drop_invocation_specific_checkpoints(self) -> None:
+        """Remove checkpoints that quote data belonging to this invocation.
+
+        The third and last of the checkpoint tests, and the subtlest. A
+        checkpoint can be true now, and free of any obviously volatile
+        pattern, and still be wrong: ``'Johnson, Katherine' is present``
+        passes its own recording, survives every re-run against member
+        102777, and fails for every other member. The capability looks
+        parameterised -- ``member_id`` is a declared input -- while quietly
+        working for exactly one of them.
+
+        Pattern matching cannot catch this; a person's name is not volatile in
+        any detectable way. What makes it wrong is not its shape but its
+        provenance: it is the answer, not the evidence. So the test is a
+        comparison rather than a regex. By emission the recorder knows both
+        halves of the invocation -- what it was given, and what it read back --
+        and any checkpoint quoting either is asserting that the arguments were
+        the recording's own.
+
+        Dropped rather than rejected. The step still ran and its action is
+        sound; only the proof was borrowed from the data. Replay tolerates a
+        step with no checkpoint, and the note says which lost one and why.
+        """
+        values = self._invocation_values()
+        if not values:
+            return
+        for step in self.steps:
+            if step.checkpoint is None:
+                continue
+            # Only text-bearing assertions can quote a value. Anything else
+            # (a URL pattern, an element presence) is structural by nature.
+            asserted = getattr(step.checkpoint.assertion, "text", "")
+            quoted = _quoted_value(asserted, values) if asserted else None
+            if quoted is None:
+                continue
+            step.checkpoint = None
+            self.notes.append(
+                f"step {step.id}: discarded checkpoint quoting {quoted!r} -- "
+                "that value belongs to the arguments this capability was "
+                "recorded with, so asserting it would pin the capability to "
+                "one member; a checkpoint must hold for every invocation"
+            )
+
     def finish(
         self,
         *,
@@ -386,9 +471,19 @@ class Recorder:
 
         from . import assertions
 
+        self._drop_invocation_specific_checkpoints()
+
         success_assertion: Assertion = TextPresent(
             frame=success_frame, text=success_text
         )
+        if _quoted_value(success_text, self._invocation_values()):
+            raise RecorderError(
+                f"the declared success condition {success_text!r} quotes a value "
+                "specific to this recording -- the member, amount or identifier "
+                "that happened to be on screen. It would hold now and fail for "
+                "every other set of arguments. Success must be stated in terms "
+                "of what the screen always shows when the goal is met."
+            )
         if not assertions.evaluate(surface, success_assertion).ok:
             raise RecorderError(
                 f"the declared success condition {success_text!r} does not hold "

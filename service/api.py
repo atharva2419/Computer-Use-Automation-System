@@ -33,6 +33,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .catalog import CapabilityCatalog, CapabilityNotApproved, CapabilityNotFound
+from .dashboard import build_router
 from .runner import CapabilityRunner
 
 DEFAULT_POLICY = Path("config/policy.meridian-hosted.yaml")
@@ -174,6 +175,30 @@ def create_app(
 
     # -- evidence ----------------------------------------------------------
 
+    @app.get("/runs/{run_id}/evidence", tags=["runs"])
+    def evidence_listing(run_id: str) -> dict[str, Any]:
+        """What a run actually wrote.
+
+        Listed rather than assumed: a successful run has no screenshot and no
+        observation dump, and offering links to files that were never written
+        would misrepresent what the evidence covers.
+        """
+        run = runner.get(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"no run {run_id!r}")
+        directory = Path(run.evidence_dir) if run.evidence_dir else None
+        if directory is None or not directory.is_dir():
+            return {"run_id": run_id, "directory": run.evidence_dir, "files": []}
+        return {
+            "run_id": run_id,
+            "directory": str(directory),
+            "files": [
+                {"name": p.name, "bytes": p.stat().st_size}
+                for p in sorted(directory.iterdir())
+                if p.is_file()
+            ],
+        }
+
     @app.get("/runs/{run_id}/evidence/{filename}", tags=["runs"])
     def evidence(run_id: str, filename: str) -> Any:
         """Serve one evidence file from a run's directory.
@@ -190,6 +215,12 @@ def create_app(
         if not path.is_file():
             raise HTTPException(status_code=404, detail=f"no evidence file {filename!r}")
         return FileResponse(path)
+
+    # -- dashboard ---------------------------------------------------------
+    # Mounted last so that every API route is already defined: the dashboard
+    # is a consumer of them, and registering it this way makes that ordering
+    # visible rather than incidental.
+    app.include_router(build_router(catalog, artifacts))
 
     @app.get("/health", tags=["catalog"])
     def health() -> JSONResponse:
