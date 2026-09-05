@@ -563,7 +563,7 @@
     },
     {
       "id": "transaction_rejected",
-      "description": "The host refused the transaction as entered -- an overdraw, an invalid field value, or an injected validation fault.",
+      "description": "The host returned its Transaction Rejected screen. This is the injected validation fault (?inject=validation).",
       "detect": {
         "kind": "text_present",
         "frame": {
@@ -577,7 +577,43 @@
       "outcome_code": "TRANSACTION_REJECTED",
       "recovery": null,
       "escalate": false,
-      "message": "The host rejected the transaction as entered. Verified against a real overdraw during recon: a transfer of more than the share holds is refused and no funds move, so this is a legitimate answer to the caller's request rather than a breakdown of the automation."
+      "message": "The host rejected the transaction as entered."
+    },
+    {
+      "id": "transfer_validation_failed",
+      "description": "The host refused the transfer as entered -- most often insufficient available balance in the source share.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "The transaction could not be validated",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "TRANSACTION_REJECTED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The host refused the transfer as entered and no funds moved. This is an answer to the request, not a breakdown of the automation."
+    },
+    {
+      "id": "field_validation_failed",
+      "description": "The host refused one or more submitted field values as malformed.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "Please correct the following",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "INPUT_REJECTED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The host rejected the values submitted. Nothing was changed; the individual reasons are listed on the screen."
     },
     {
       "id": "supervisor_override_required",

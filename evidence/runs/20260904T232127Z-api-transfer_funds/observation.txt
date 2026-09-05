@@ -1,0 +1,32 @@
+SURFACE URL: https://web-sample.interface-hiring.com/members/102777/transfer/review
+
+--- FRAME name='(top)' url=https://web-sample.interface-hiring.com/members/102777/transfer/review title='Funds Transfer - Meridian Core' ---
+- table:
+  - rowgroup:
+    - row "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™":
+      - cell "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™"
+    - row "Main Menu · Member Inquiry · System Settings · Sign Off":
+      - cell "Main Menu · Member Inquiry · System Settings · Sign Off":
+        - link "Main Menu":
+          - /url: /menu
+        - text: ·
+        - link "Member Inquiry":
+          - /url: /members
+        - text: ·
+        - link "System Settings":
+          - /url: /settings
+        - text: ·
+        - link "Sign Off":
+          - /url: /signoff
+    - 'row "FUNDS TRANSFER The transaction could not be validated: Insufficient available balance in the source share. Return to Funds Transfer"':
+      - 'cell "FUNDS TRANSFER The transaction could not be validated: Insufficient available balance in the source share. Return to Funds Transfer"':
+        - heading "FUNDS TRANSFER" [level=1]
+        - text: "The transaction could not be validated:"
+        - list:
+          - listitem: Insufficient available balance in the source share.
+        - link "Return to Funds Transfer":
+          - /url: /members/102777/transfer
+    - row "OPR TELLER1 | BR MAIN-001 | 09/04/2026 23:21:47 | SID 7B5B343C":
+      - cell "OPR TELLER1 | BR MAIN-001 | 09/04/2026 23:21:47 | SID 7B5B343C"
+    - row "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel":
+      - cell "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel"

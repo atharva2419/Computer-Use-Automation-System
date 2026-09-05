@@ -34,7 +34,11 @@ from .catalog import CapabilityCatalog
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def build_router(catalog: CapabilityCatalog, artifact_dir: Path | str) -> APIRouter:
+def build_router(
+    catalog: CapabilityCatalog,
+    artifact_dir: Path | str,
+    planner_name: str = "",
+) -> APIRouter:
     templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
     router = APIRouter(tags=["dashboard"], include_in_schema=False)
 
@@ -53,6 +57,14 @@ def build_router(catalog: CapabilityCatalog, artifact_dir: Path | str) -> APIRou
                 "selected": product,
                 "artifact_dir": str(artifact_dir),
             },
+        )
+
+    @router.get("/ui/chat", response_class=HTMLResponse)
+    def chat(request: Request) -> Any:
+        # The planner's identity is rendered on the page so a scripted reply
+        # is never mistaken for a model's.
+        return templates.TemplateResponse(
+            request=request, name="chat.html", context={"planner_name": planner_name}
         )
 
     @router.get("/ui/runs", response_class=HTMLResponse)

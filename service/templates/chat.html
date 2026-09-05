@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:13px; flex-wrap:wrap">
+  <h2 style="margin:0">Chat</h2>
+  <span class="dim" style="font-size:12px">
+    planner: <span class="mono">{{ planner_name }}</span>
+    &middot; the model picks the capability; the result is read off the run, never generated
+  </span>
+</div>
+
+<div class="panel" id="log" style="padding:16px 18px; min-height:220px; max-height:52vh; overflow-y:auto">
+  <div class="dim">
+    Ask for something. For example:
+    <ul style="margin:7px 0 0; padding-left:19px">
+      <li>What is the balance for member 102777?</li>
+      <li>Transfer 1.00 from 102777-MMKT-3 to 102777-MMKT-4</li>
+      <li>Check the balance for member 999999 <span class="dim">(no such member)</span></li>
+    </ul>
+  </div>
+</div>
+
+<form id="ask" style="display:flex; gap:9px; margin-top:13px">
+  <input id="msg" type="text" autocomplete="off" style="flex:1"
+         placeholder="What is the balance for member 102777?">
+  <button type="submit">Send</button>
+</form>
+<label style="margin-top:9px; text-transform:none; letter-spacing:0; color:var(--dim); font-size:12px">
+  <input type="checkbox" id="supervised" style="width:auto; margin-right:7px">
+  An operator is supervising &mdash; allow capabilities still in draft
+</label>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const log = document.getElementById("log");
+let first = true;
+
+function bubble(who, html, cls) {
+  if (first) { log.innerHTML = ""; first = false; }
+  const el = document.createElement("div");
+  el.style.margin = "0 0 13px";
+  el.innerHTML = '<div class="dim" style="font-size:11px; text-transform:uppercase; '
+    + 'letter-spacing:.6px; margin-bottom:3px">' + who + "</div>"
+    + '<div class="' + (cls || "") + '">' + html + "</div>";
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el.lastChild;
+}
+
+async function poll(runId, target) {
+  // The same public run endpoints the dashboard uses. The chat is not a
+  // second path into the system, just a different way to start one.
+  for (;;) {
+    await new Promise(r => setTimeout(r, 1200));
+    let run;
+    try { run = await (await fetch("/runs/" + runId)).json(); }
+    catch (e) { continue; }
+
+    const done = ["success", "failed", "business_outcome", "rejected"].includes(run.status);
+    if (!done && run.status !== "awaiting_operator") {
+      const last = run.steps.length ? run.steps[run.steps.length - 1] : null;
+      target.innerHTML = '<span class="dim">Working&hellip; '
+        + (last ? esc(last.intent) : "starting") + " ("
+        + run.steps.length + " steps)</span>";
+      continue;
+    }
+
+    const s = await (await fetch("/chat/runs/" + runId + "/summary")).json();
+    const cls = {success: "b-ok", business_outcome: "b-info",
+                 awaiting_operator: "b-warn"}[run.status] || "b-bad";
+    target.innerHTML = '<span class="' + cls + '">' + esc(s.summary) + "</span>"
+      + '<div style="margin-top:7px"><a href="/ui/runs/' + runId + '">'
+      + "steps, evidence and screenshots &rarr;</a></div>";
+
+    if (run.status === "awaiting_operator") continue;  // a person may still resume it
+    return;
+  }
+}
+
+document.getElementById("ask").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const input = document.getElementById("msg");
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+  bubble("you", esc(message));
+
+  const target = bubble("system", '<span class="dim">Thinking&hellip;</span>');
+  let body;
+  try {
+    body = await (await fetch("/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        message: message,
+        supervised: document.getElementById("supervised").checked,
+      }),
+    })).json();
+  } catch (e) { target.textContent = String(e); return; }
+
+  if (!body.run_id) {
+    // Covers both "I did not understand" and a guardrail refusal. The refusal
+    // is shown in full: why the system declined is the interesting part.
+    target.innerHTML = '<span class="' + (body.refused ? "b-warn" : "") + '">'
+      + esc(body.reply) + "</span>";
+    return;
+  }
+  target.innerHTML = '<span class="dim">Invoking <span class="mono">'
+    + esc(body.capability) + "</span>&hellip;</span>";
+  poll(body.run_id, target);
+});
+</script>
+{% endblock %}

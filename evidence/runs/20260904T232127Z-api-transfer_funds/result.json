@@ -1,0 +1,206 @@
+{
+  "run_id": "81636db05560",
+  "capability_id": "meridian_hosted.member.transfer_funds",
+  "capability_version": 1,
+  "started_at": "2026-09-04T23:21:32.032455Z",
+  "finished_at": "2026-09-04T23:21:48.044386Z",
+  "duration_ms": 16011,
+  "steps": [
+    {
+      "step_id": "go_to_the_meridian",
+      "index": 0,
+      "intent": "Go to the MERIDIAN CORE servicing console sign-on page",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 3500,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 94,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_password",
+      "index": 2,
+      "intent": "Enter operator password",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 77,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "submit_sign_on",
+      "index": 3,
+      "intent": "Submit sign on",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 702,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "go_to_member_inquiry",
+      "index": 4,
+      "intent": "Go to Member Inquiry / Selection",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 672,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_number_to",
+      "index": 5,
+      "intent": "Enter member number to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_member",
+      "index": 6,
+      "intent": "Search for member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 672,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_the_member_record",
+      "index": 7,
+      "intent": "Open the member record for 102777",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 640,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "go_to_funds_transfer",
+      "index": 8,
+      "intent": "Go to Funds Transfer for this member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 641,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_from_share_102777_2",
+      "index": 9,
+      "intent": "Select from share 102777-MMKT-3",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 77,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_to_share_102777",
+      "index": 10,
+      "intent": "Select to share 102777-MMKT-4",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 61,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_transfer_amount",
+      "index": 11,
+      "intent": "Enter transfer amount",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_memo",
+      "index": 12,
+      "intent": "Enter memo",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "continue_to_confirmation_screen",
+      "index": 13,
+      "intent": "Continue to confirmation screen",
+      "action_kind": "click",
+      "status": "failed",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 8608,
+      "checkpoint_ok": false,
+      "note": ""
+    }
+  ],
+  "recoveries": [],
+  "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-09-04T23:21:32.032455Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian_hosted.member.transfer_funds"
+    }
+  ],
+  "human_touched": false,
+  "evidence_dir": null,
+  "status": "failed",
+  "error": {
+    "category": "checkpoint_failed",
+    "step_id": "continue_to_confirmation_screen",
+    "step_index": 13,
+    "intent": "Continue to confirmation screen",
+    "expected": "'CONFIRM' is present after continue_to_confirmation_screen. (text present: 'CONFIRM')",
+    "observed": "text not present; frame begins 'MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems\u2122 Main Menu \u00b7 M'",
+    "signal_id": null,
+    "strategies_tried": [],
+    "evidence": [
+      "evidence\\runs\\20260904T232127Z-api-transfer_funds\\failure.png",
+      "evidence\\runs\\20260904T232127Z-api-transfer_funds\\observation.txt"
+    ]
+  },
+  "outputs_written": false
+}

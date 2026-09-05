@@ -1,0 +1,113 @@
+{
+  "run_id": "def7a02bad38",
+  "capability_id": "meridian_hosted.member.read_balance",
+  "capability_version": 1,
+  "started_at": "2026-09-04T22:43:51.274203Z",
+  "finished_at": "2026-09-04T22:43:54.128958Z",
+  "duration_ms": 2854,
+  "steps": [
+    {
+      "step_id": "go_to_the_sign",
+      "index": 0,
+      "intent": "Go to the sign on page for the servicing console",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 702,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 63,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_password",
+      "index": 2,
+      "intent": "Enter operator password",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 47,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "sign_on",
+      "index": 3,
+      "intent": "Sign on",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 686,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "go_to_member_inquiry",
+      "index": 4,
+      "intent": "Go to Member Inquiry",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 641,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_number_to",
+      "index": 5,
+      "intent": "Enter member number to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 93,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_member",
+      "index": 6,
+      "intent": "Search for member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 609,
+      "checkpoint_ok": true,
+      "note": "business outcome MEMBER_NOT_FOUND"
+    }
+  ],
+  "recoveries": [],
+  "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-09-04T22:43:51.274203Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian_hosted.member.read_balance"
+    }
+  ],
+  "human_touched": false,
+  "evidence_dir": null,
+  "status": "business_outcome",
+  "code": "MEMBER_NOT_FOUND",
+  "message": "No member record matches the supplied identifier.",
+  "signal_id": "member_search_empty",
+  "outputs": {},
+  "outputs_written": false,
+  "output_names": []
+}

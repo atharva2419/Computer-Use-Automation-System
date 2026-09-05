@@ -67,8 +67,8 @@ signals:
 
   - id: transaction_rejected
     description: >-
-      The host refused the transaction as entered -- an overdraw, an invalid
-      field value, or an injected validation fault.
+      The host returned its Transaction Rejected screen. This is the injected
+      validation fault (?inject=validation).
     detect:
       kind: text_present
       frame: {kind: top}
@@ -76,11 +76,51 @@ signals:
       case_sensitive: false
     classification: business_outcome
     outcome_code: TRANSACTION_REJECTED
+    message: The host rejected the transaction as entered.
+
+  # A natural overdraw does NOT produce the screen above. It re-renders the
+  # Funds Transfer form with "The transaction could not be validated:" and a
+  # list of reasons. Matching only the injected wording meant a real
+  # insufficient-funds result -- a legitimate answer to the caller -- was
+  # reported as a hard failure at the confirmation step.
+  #
+  # Found by running the recorded transfer against a share another candidate
+  # had already drained to $0.00, not by reading the brief.
+  - id: transfer_validation_failed
+    description: >-
+      The host refused the transfer as entered -- most often insufficient
+      available balance in the source share.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: "The transaction could not be validated"
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: TRANSACTION_REJECTED
     message: >-
-      The host rejected the transaction as entered. Verified against a real
-      overdraw during recon: a transfer of more than the share holds is
-      refused and no funds move, so this is a legitimate answer to the
-      caller's request rather than a breakdown of the automation.
+      The host refused the transfer as entered and no funds moved. This is an
+      answer to the request, not a breakdown of the automation.
+
+  # Field-level rejection on Update Member Information: a malformed email,
+  # phone or address comes back as "Please correct the following:".
+  #
+  # Given its own outcome code rather than folded into TRANSACTION_REJECTED.
+  # A caller branches differently on the two: a rejected transaction means the
+  # money is not there, while a rejected field means the values it supplied
+  # were malformed and can be corrected and resubmitted.
+  - id: field_validation_failed
+    description: >-
+      The host refused one or more submitted field values as malformed.
+    detect:
+      kind: text_present
+      frame: {kind: top}
+      text: "Please correct the following"
+      case_sensitive: false
+    classification: business_outcome
+    outcome_code: INPUT_REJECTED
+    message: >-
+      The host rejected the values submitted. Nothing was changed; the
+      individual reasons are listed on the screen.
 
   - id: supervisor_override_required
     description: The operator profile is not entitled to this function.

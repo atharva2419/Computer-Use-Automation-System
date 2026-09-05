@@ -33,6 +33,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .catalog import CapabilityCatalog, CapabilityNotApproved, CapabilityNotFound
+from .chatbot import build_planner, operator_credentials, summarise
 from .dashboard import build_router
 from .runner import CapabilityRunner
 
@@ -59,6 +60,16 @@ class InvokeRequest(BaseModel):
     )
 
 
+class ChatRequest(BaseModel):
+    """One turn of conversation."""
+
+    message: str
+    supervised: bool = Field(
+        default=False,
+        description="Declare that an operator is watching, allowing a draft capability.",
+    )
+
+
 class DecisionRequest(BaseModel):
     """An operator's answer to a run that stopped for a human."""
 
@@ -77,8 +88,14 @@ def create_app(
     artifacts: Path | str = DEFAULT_ARTIFACTS,
     policy: Path | str = DEFAULT_POLICY,
     headed: bool | None = None,
+    chat_product: str | None = "meridian-hosted",
 ) -> FastAPI:
     catalog = CapabilityCatalog(artifacts)
+    # The chatbot is offered one product's capabilities, not every artifact on
+    # disk. The catalog holds capabilities for two different applications, and
+    # a planner asked to choose between "read a balance here" and "read a
+    # balance there" is being asked a question the user did not pose.
+    planner, planner_name = build_planner(catalog)
     runner = CapabilityRunner(
         catalog=catalog,
         policy_path=policy,
@@ -216,11 +233,85 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no evidence file {filename!r}")
         return FileResponse(path)
 
+    # -- chatbot -----------------------------------------------------------
+
+    @app.post("/chat", tags=["chatbot"])
+    def chat(request: ChatRequest) -> dict[str, Any]:
+        """Turn a message into a capability invocation.
+
+        Returns as soon as the run is queued rather than waiting for it. The
+        caller polls the run like any other, which is what lets the chat show
+        a transfer stopping for approval instead of appearing to hang.
+        """
+        entries = [catalog.entry(n) for n in catalog.names()]
+        if chat_product:
+            entries = [e for e in entries if e.capability.app.product == chat_product]
+
+        plan = planner.plan(request.message, entries)
+        chosen = plan.capability
+        if chosen is None:
+            return {"reply": plan.reply, "planner": planner_name, "run_id": None}
+        if chosen not in catalog:
+            # A planner can name a capability that is not there -- a model can
+            # be wrong, and the scripted one matches on a suffix. Reported as
+            # a reply rather than a 500: nothing was attempted.
+            return {
+                "reply": f"I picked {chosen!r}, but there is no such capability.",
+                "planner": planner_name,
+                "run_id": None,
+            }
+
+        # Credentials are attached here, after planning and outside the
+        # conversation. The planner proposed a capability and its business
+        # arguments; it never saw a password and could not have supplied one.
+        arguments = {**plan.arguments, **operator_credentials(catalog.get(chosen))}
+        try:
+            run = runner.submit(chosen, arguments, allow_draft=request.supervised)
+        except CapabilityNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except CapabilityNotApproved as exc:
+            # Surfaced as a reply, not an HTTP error: the guardrail refusing is
+            # a normal conversational outcome, and the caller should read why.
+            return {
+                "reply": f"I can't run that unattended. {exc}",
+                "planner": planner_name,
+                "capability": chosen,
+                "refused": True,
+                "run_id": None,
+            }
+        return {
+            "reply": f"Running {chosen}.",
+            "planner": planner_name,
+            "capability": chosen,
+            "arguments": {k: v for k, v in plan.arguments.items()},
+            "run_id": run.run_id,
+        }
+
+    @app.get("/chat/runs/{run_id}/summary", tags=["chatbot"])
+    def chat_summary(run_id: str) -> dict[str, Any]:
+        """A finished run, in plain language.
+
+        Templated from the structured result rather than generated. No model
+        is called here, so nothing in the sentence can be invented -- every
+        figure came out of the replay's typed outputs.
+        """
+        run = runner.get(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"no run {run_id!r}")
+        entry = catalog.entry(run.capability_id) if run.capability_id in catalog else None
+        return {
+            "run_id": run_id,
+            "status": run.status,
+            "summary": summarise(run, entry),
+            "outputs": run.outputs,
+            "outcome_code": run.outcome_code,
+        }
+
     # -- dashboard ---------------------------------------------------------
     # Mounted last so that every API route is already defined: the dashboard
     # is a consumer of them, and registering it this way makes that ordering
     # visible rather than incidental.
-    app.include_router(build_router(catalog, artifacts))
+    app.include_router(build_router(catalog, artifacts, planner_name))
 
     @app.get("/health", tags=["catalog"])
     def health() -> JSONResponse:
