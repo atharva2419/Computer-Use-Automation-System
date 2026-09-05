@@ -1,0 +1,112 @@
+SURFACE URL: https://web-sample.interface-hiring.com/members/103001
+
+--- FRAME name='(top)' url=https://web-sample.interface-hiring.com/members/103001 title='Member Record - Meridian Core' ---
+- table:
+  - rowgroup:
+    - row "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™":
+      - cell "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™"
+    - row "Main Menu · Member Inquiry · System Settings · Sign Off":
+      - cell "Main Menu · Member Inquiry · System Settings · Sign Off":
+        - link "Main Menu":
+          - /url: /menu
+        - text: ·
+        - link "Member Inquiry":
+          - /url: /members
+        - text: ·
+        - link "System Settings":
+          - /url: /settings
+        - text: ·
+        - link "Sign Off":
+          - /url: /signoff
+    - 'row "MEMBER RECORD Member No.: 103001 Name: Vaughan, Dorothy E-mail: [REDACTED:email] Phone: [REDACTED:phone] Address: 58 Fortran Ave, Newport SHARES / BALANCES Share ID Type Balance Status 103001-S0001 Regular Shares $760.50 HOLD [HOLD] [REDACTED:share_id] Money Market $4.00 HOLD [HOLD] [REDACTED:share_id] Money Market $50.00 HOLD [HOLD] [REDACTED:share_id] Money Market $1.00 HOLD [HOLD] [REDACTED:share_id] Money Market $123.00 OPEN 103001-S0070-6 Share Draft (Checking) $10.00 HOLD [HOLD] [REDACTED:share_id] Money Market $52.00 OPEN 103001-S0070-8 Share Draft (Checking) $5.00 OPEN 103001-S0001-9 Regular Shares $10.00 OPEN [REDACTED:share_id] Money Market $25.00 OPEN ACTIONS Funds Transfer · Open New Share · Update Member Information · Place Account Hold"':
+      - 'cell "MEMBER RECORD Member No.: 103001 Name: Vaughan, Dorothy E-mail: [REDACTED:email] Phone: [REDACTED:phone] Address: 58 Fortran Ave, Newport SHARES / BALANCES Share ID Type Balance Status 103001-S0001 Regular Shares $760.50 HOLD [HOLD] [REDACTED:share_id] Money Market $4.00 HOLD [HOLD] [REDACTED:share_id] Money Market $50.00 HOLD [HOLD] [REDACTED:share_id] Money Market $1.00 HOLD [HOLD] [REDACTED:share_id] Money Market $123.00 OPEN 103001-S0070-6 Share Draft (Checking) $10.00 HOLD [HOLD] [REDACTED:share_id] Money Market $52.00 OPEN 103001-S0070-8 Share Draft (Checking) $5.00 OPEN 103001-S0001-9 Regular Shares $10.00 OPEN [REDACTED:share_id] Money Market $25.00 OPEN ACTIONS Funds Transfer · Open New Share · Update Member Information · Place Account Hold"':
+        - heading "MEMBER RECORD" [level=1]
+        - table:
+          - rowgroup:
+            - 'row "Member No.: 103001 Name: Vaughan, Dorothy"':
+              - cell "Member No.:"
+              - cell "103001"
+              - cell "Name:"
+              - cell "Vaughan, Dorothy"
+            - 'row "E-mail: [REDACTED:email] Phone: [REDACTED:phone]"':
+              - cell "E-mail:"
+              - cell "[REDACTED:email]"
+              - cell "Phone:"
+              - cell "[REDACTED:phone]"
+            - 'row "Address: 58 Fortran Ave, Newport"':
+              - cell "Address:"
+              - cell "58 Fortran Ave, Newport"
+        - text: SHARES / BALANCES
+        - table:
+          - rowgroup:
+            - row "Share ID Type Balance Status":
+              - cell "Share ID"
+              - cell "Type"
+              - cell "Balance"
+              - cell "Status"
+            - row "103001-S0001 Regular Shares $760.50 HOLD [HOLD]":
+              - cell "103001-S0001"
+              - cell "Regular Shares"
+              - cell "$760.50"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $4.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$4.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $50.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$50.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $1.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$1.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $123.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$123.00"
+              - cell "OPEN"
+            - row "103001-S0070-6 Share Draft (Checking) $10.00 HOLD [HOLD]":
+              - cell "103001-S0070-6"
+              - cell "Share Draft (Checking)"
+              - cell "$10.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $52.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$52.00"
+              - cell "OPEN"
+            - row "103001-S0070-8 Share Draft (Checking) $5.00 OPEN":
+              - cell "103001-S0070-8"
+              - cell "Share Draft (Checking)"
+              - cell "$5.00"
+              - cell "OPEN"
+            - row "103001-S0001-9 Regular Shares $10.00 OPEN":
+              - cell "103001-S0001-9"
+              - cell "Regular Shares"
+              - cell "$10.00"
+              - cell "OPEN"
+            - row "[REDACTED:share_id] Money Market $25.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$25.00"
+              - cell "OPEN"
+        - text: ACTIONS
+        - link "Funds Transfer":
+          - /url: /members/103001/transfer
+        - text: ·
+        - link "Open New Share":
+          - /url: /members/103001/open-share
+        - text: ·
+        - link "Update Member Information":
+          - /url: /members/103001/update
+        - text: ·
+        - link "Place Account Hold":
+          - /url: /members/103001/hold
+    - row "OPR TELLER1 | BR MAIN-001 | 09/05/2026 01:29:49 | SID 86D8311D":
+      - cell "OPR TELLER1 | BR MAIN-001 | 09/05/2026 01:29:49 | SID 86D8311D"
+    - row "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel":
+      - cell "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel"

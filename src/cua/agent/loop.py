@@ -24,7 +24,7 @@ from typing import Any
 
 from ..evidence import FileEvidenceSink
 from ..guardrails import GateRequest, PolicyGate
-from ..recorder import Recorder, RecorderError, step_id_for
+from ..recorder import Recorder, RecorderError, circular_anchor, step_id_for
 from ..redaction import Redactor
 from ..replay import EscalationContext, EscalationHandler, NoOperatorAvailable
 from ..schema.capability import (
@@ -411,6 +411,27 @@ class DiscoveryAgent:
             value, _ = self._surface().read(target)
         except SurfaceError as exc:
             self._respond(call, f"Could not read that: {exc}")
+            return None
+
+        # Refused at the tool boundary rather than recorded and repaired
+        # later, because the model can still fix it: it is looking at the
+        # page and can pick a label to anchor on. Telling it why is the whole
+        # reason this check lives here instead of at emission.
+        if circular_anchor(args["row_contains"], value):
+            self._note(
+                "circular_anchor_refused",
+                output=args["output_name"],
+                row_contains=args["row_contains"],
+            )
+            self._respond(
+                call,
+                f"That read {value.strip()!r}, but the row is anchored on "
+                f"{args['row_contains']!r} -- which is the same value. A locator "
+                "that finds a row by the answer it is looking for only works "
+                "for this one record; every other member would find nothing. "
+                "Anchor the row on a fixed label that is on the screen "
+                "whatever the data says, then read the cell beside it.",
+            )
             return None
 
         self.recorder.record_output(

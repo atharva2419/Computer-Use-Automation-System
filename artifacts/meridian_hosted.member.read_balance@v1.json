@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "id": "meridian_hosted.member.read_balance",
   "version": 1,
-  "name": "Read a member's Regular Shares balance",
+  "name": "Read member balance",
   "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1, then look up member 102777 by member number, open their member record, and read the member's name plus the account number, balance and status of their Regular Shares account",
   "app": {
     "product": "meridian-hosted",
@@ -58,12 +58,12 @@
           "strategies": [
             {
               "kind": "row_scoped_cell",
-              "row_contains": "Name:",
+              "row_contains": "Member No.:",
               "cell_index": 3,
               "exact_row_text": false
             }
           ],
-          "rationale": "Anchored on the row containing 'Name:' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
+          "rationale": "Anchored on the row containing 'Member No.:' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
         },
         "source": "text",
         "attribute": null,
@@ -73,7 +73,7 @@
         }
       },
       "required": true,
-      "after_step": "open_member_record",
+      "after_step": "select_member_102777_to",
       "sensitivity": "restricted"
     },
     {
@@ -105,7 +105,7 @@
         }
       },
       "required": true,
-      "after_step": "open_member_record",
+      "after_step": "select_member_102777_to",
       "sensitivity": "restricted"
     },
     {
@@ -137,7 +137,7 @@
         }
       },
       "required": true,
-      "after_step": "open_member_record",
+      "after_step": "select_member_102777_to",
       "sensitivity": "restricted"
     },
     {
@@ -169,14 +169,14 @@
         }
       },
       "required": true,
-      "after_step": "open_member_record",
+      "after_step": "select_member_102777_to",
       "sensitivity": "restricted"
     }
   ],
   "steps": [
     {
       "id": "go_to_the_sign",
-      "intent": "Go to the sign on page for the servicing console",
+      "intent": "Go to the sign on page of the servicing console",
       "action": {
         "kind": "navigate",
         "url": {
@@ -298,12 +298,12 @@
       "signals": []
     },
     {
-      "id": "sign_on",
-      "intent": "Sign on",
+      "id": "submit_sign_on_form",
+      "intent": "Submit sign on form",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Sign on",
+          "described_as": "Submit sign on form",
           "frame": {
             "kind": "top",
             "value": null
@@ -327,7 +327,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MAIN MENU' is present after sign_on.",
+        "description": "'MAIN MENU' is present after submit_sign_on_form.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -343,12 +343,12 @@
       "signals": []
     },
     {
-      "id": "go_to_member_inquiry",
-      "intent": "Go to Member Inquiry",
+      "id": "navigate_to_member_inquiry",
+      "intent": "Navigate to Member Inquiry / Selection",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Go to Member Inquiry",
+          "described_as": "Navigate to Member Inquiry / Selection",
           "frame": {
             "kind": "top",
             "value": null
@@ -372,7 +372,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Member Inquiry' is present after go_to_member_inquiry.",
+        "description": "'Member Inquiry' is present after navigate_to_member_inquiry.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -462,29 +462,17 @@
         }
       },
       "risk": "safe",
-      "checkpoint": {
-        "description": "'102777' is present after search_for_member.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "102777",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
+      "checkpoint": null,
       "timeout_ms": 10000,
       "signals": []
     },
     {
-      "id": "open_member_record",
-      "intent": "Open member record",
+      "id": "select_member_102777_to",
+      "intent": "Select member 102777 to open record",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Open member record",
+          "described_as": "Select member 102777 to open record",
           "frame": {
             "kind": "top",
             "value": null
@@ -508,14 +496,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Johnson, Katherine' is present after open_member_record.",
+        "description": "'Regular Shares' is present after select_member_102777_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Johnson, Katherine",
+          "text": "Regular Shares",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -740,10 +728,10 @@
   },
   "approval": "approved",
   "provenance": {
-    "discovered_at": "2026-09-03T20:19:04.980750Z",
+    "discovered_at": "2026-09-05T01:32:07.807601Z",
     "model": "claude-sonnet-5",
-    "discovery_run_id": "55ca5d000d96",
-    "transcript_digest": "8d9993a5c01878353c5622aac82cf911b118feda2c87ce059c965f16e5e5d5fa",
+    "discovery_run_id": "5172e15bab70",
+    "transcript_digest": "f80f2eac9a1e27328b160de4880f765e9e09fb079d170fc87e1fb61b37e2856a",
     "recorded_by": "llm_discovery"
   },
   "tags": []

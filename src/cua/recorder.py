@@ -120,6 +120,25 @@ def _quoted_value(text: str, values: list[str]) -> str | None:
     return None
 
 
+def circular_anchor(anchor: str, observed: str) -> bool:
+    """Whether a locator is anchored on the value it is meant to read.
+
+    "Find the row containing 'Johnson, Katherine', then read the name out of
+    it" locates the answer by knowing it already. It resolves perfectly during
+    the recording and finds nothing for any other member -- the same mistake
+    as a checkpoint quoting its own result, one layer down, and just as
+    invisible until someone supplies different arguments.
+
+    A row anchored on a *label* ("Regular Shares", "Member Name") is the same
+    shape and entirely correct, so the test is specifically whether the anchor
+    and the reading are the same text.
+    """
+    anchor, observed = anchor.strip().casefold(), observed.strip().casefold()
+    if len(anchor) < 4 or len(observed) < 4:
+        return False
+    return anchor in observed or observed in anchor
+
+
 class RecorderError(RuntimeError):
     """The trajectory cannot be turned into a valid capability."""
 

@@ -1,0 +1,157 @@
+SURFACE URL: https://web-sample.interface-hiring.com/members/100234
+
+--- FRAME name='(top)' url=https://web-sample.interface-hiring.com/members/100234 title='Member Record - Meridian Core' ---
+- table:
+  - rowgroup:
+    - row "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™":
+      - cell "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™"
+    - row "Main Menu · Member Inquiry · System Settings · Sign Off":
+      - cell "Main Menu · Member Inquiry · System Settings · Sign Off":
+        - link "Main Menu":
+          - /url: /menu
+        - text: ·
+        - link "Member Inquiry":
+          - /url: /members
+        - text: ·
+        - link "System Settings":
+          - /url: /settings
+        - text: ·
+        - link "Sign Off":
+          - /url: /signoff
+    - row:
+      - cell:
+        - heading "MEMBER RECORD" [level=1]
+        - table:
+          - rowgroup:
+            - 'row "Member No.: 100234 Name: Lovelace, Ada"':
+              - cell "Member No.:"
+              - cell "100234"
+              - cell "Name:"
+              - cell "Lovelace, Ada"
+            - 'row "E-mail: [REDACTED:email] Phone: [REDACTED:phone]"':
+              - cell "E-mail:"
+              - cell "[REDACTED:email]"
+              - cell "Phone:"
+              - cell "[REDACTED:phone]"
+            - 'row "Address: 9 Verify Lane, Checkstown"':
+              - cell "Address:"
+              - cell "9 Verify Lane, Checkstown"
+        - text: SHARES / BALANCES
+        - table:
+          - rowgroup:
+            - row "Share ID Type Balance Status":
+              - cell "Share ID"
+              - cell "Type"
+              - cell "Balance"
+              - cell "Status"
+            - row "100234-S0001 Regular Shares $2,499.00 HOLD [HOLD]":
+              - cell "100234-S0001"
+              - cell "Regular Shares"
+              - cell "$2,499.00"
+              - cell "HOLD [HOLD]"
+            - row "100234-S0070 Share Draft (Checking) $1,240.55 HOLD [HOLD]":
+              - cell "100234-S0070"
+              - cell "Share Draft (Checking)"
+              - cell "$1,240.55"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $11.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$11.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $25.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$25.00"
+              - cell "HOLD [HOLD]"
+            - row "100234-S0001-5 Regular Shares $23.00 HOLD [HOLD]":
+              - cell "100234-S0001-5"
+              - cell "Regular Shares"
+              - cell "$23.00"
+              - cell "HOLD [HOLD]"
+            - row "100234-S0001-6 Regular Shares $40.99 OPEN":
+              - cell "100234-S0001-6"
+              - cell "Regular Shares"
+              - cell "$40.99"
+              - cell "OPEN"
+            - row "[REDACTED:share_id] Money Market $30.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$30.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $15.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$15.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $201.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$201.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $20.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$20.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $50.01 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$50.01"
+              - cell "OPEN"
+            - row "100234-S0001-12 Regular Shares $45.00 OPEN":
+              - cell "100234-S0001-12"
+              - cell "Regular Shares"
+              - cell "$45.00"
+              - cell "OPEN"
+            - row "100234-S0001-13 Regular Shares $15.00 OPEN":
+              - cell "100234-S0001-13"
+              - cell "Regular Shares"
+              - cell "$15.00"
+              - cell "OPEN"
+            - row "100234-S0001-14 Regular Shares $94.00 OPEN":
+              - cell "100234-S0001-14"
+              - cell "Regular Shares"
+              - cell "$94.00"
+              - cell "OPEN"
+            - row "[REDACTED:share_id] Certificate $500.00 HOLD [HOLD]":
+              - cell "[REDACTED:share_id]"
+              - cell "Certificate"
+              - cell "$500.00"
+              - cell "HOLD [HOLD]"
+            - row "[REDACTED:share_id] Money Market $25.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$25.00"
+              - cell "OPEN"
+            - row "100234-S0070-17 Share Draft (Checking) $50.00 OPEN":
+              - cell "100234-S0070-17"
+              - cell "Share Draft (Checking)"
+              - cell "$50.00"
+              - cell "OPEN"
+            - row "100234-S0001-18 Regular Shares $33.00 HOLD [HOLD]":
+              - cell "100234-S0001-18"
+              - cell "Regular Shares"
+              - cell "$33.00"
+              - cell "HOLD [HOLD]"
+            - row "100234-S0001-19 Regular Shares $74.00 OPEN":
+              - cell "100234-S0001-19"
+              - cell "Regular Shares"
+              - cell "$74.00"
+              - cell "OPEN"
+            - row "100234-S0001-20 Regular Shares $4.00 OPEN":
+              - cell "100234-S0001-20"
+              - cell "Regular Shares"
+              - cell "$4.00"
+              - cell "OPEN"
+            - row "[REDACTED:share_id] Money Market $25.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$25.00"
+              - cell "OPEN"
+            - row "[REDACTED:share_id] Money Market $25.00 OPEN":
+              - cell "[REDACTED:share_id]"
+              - cell "Money Market"
+              - cell "$25.00"
+              - c
+... [truncated]

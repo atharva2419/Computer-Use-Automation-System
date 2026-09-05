@@ -24,7 +24,12 @@ from werkzeug.serving import make_server
 from cua.agent.loop import DiscoveryAgent
 from cua.agent.tools import TOOLS, tool_names
 from cua.guardrails import Policy, PolicyGate
-from cua.recorder import Recorder, load_signal_library, step_id_for
+from cua.recorder import (
+    Recorder,
+    circular_anchor,
+    load_signal_library,
+    step_id_for,
+)
 from cua.replay import ReplayEngine
 from cua.schema.capability import (
     AppBinding,
@@ -522,3 +527,31 @@ def test_secret_arguments_are_never_compared_against():
     """A credential is excluded from the audit, not matched against it."""
     recorder = _bare_recorder()
     assert "hunter2" not in recorder._invocation_values()
+
+
+# --- circular locators ------------------------------------------------------
+#
+# The same mistake as a checkpoint quoting its own result, one layer down: a
+# row located by the value it is meant to read resolves during the recording
+# and finds nothing for any other record.
+
+
+def test_anchor_equal_to_the_reading_is_circular():
+    assert circular_anchor("Johnson, Katherine", "Johnson, Katherine")
+
+
+def test_anchor_contained_in_the_reading_is_circular():
+    """Half the cell pins the locator just as firmly as all of it."""
+    assert circular_anchor("Johnson", "Johnson, Katherine")
+
+
+def test_label_anchor_is_not_circular():
+    """The correct shape: find the row by its label, read the cell beside it."""
+    assert not circular_anchor("Regular Shares", "102777-S0001")
+    assert not circular_anchor("Member No.:", "Johnson, Katherine")
+    assert not circular_anchor("Regular Shares", "$41,980.00")
+
+
+def test_short_values_are_left_alone():
+    """A two-character coincidence is likelier than a real quotation."""
+    assert not circular_anchor("No", "No")

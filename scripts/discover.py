@@ -26,6 +26,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from cua.agent.client import build_client
 from cua.agent.loop import DiscoveryAgent, resolve_model
 from cua.escalation import ConsoleOperatorHandler
 from cua.evidence import FileEvidenceSink
@@ -167,7 +168,7 @@ def main() -> int:
         return 2
 
     try:
-        import anthropic
+        import anthropic  # noqa: F401 - presence check only
     except ImportError:
         print(f"{RED}the anthropic package is not installed{RESET}")
         return 2
@@ -222,7 +223,7 @@ def main() -> int:
     try:
         agent = DiscoveryAgent(
             session=session,
-            client=anthropic.Anthropic(),
+            client=build_client(),
             model=model,
             gate=gate,
             recorder=recorder,

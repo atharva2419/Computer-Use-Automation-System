@@ -198,9 +198,12 @@ class ClaudePlanner:
     @property
     def client(self) -> Any:
         if self._client is None:
-            import anthropic  # imported late: the API runs without a key
+            # Shared with the discovery loop so the workspace header --
+            # required by an organisation-scoped key -- is applied once
+            # rather than in each place a client happens to be built.
+            from cua.agent.client import build_client
 
-            self._client = anthropic.Anthropic()
+            self._client = build_client()
         return self._client
 
     def plan(self, message: str, entries: list[CatalogEntry]) -> Plan:
