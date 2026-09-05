@@ -1,0 +1,125 @@
+{
+  "run_id": "664826579b1a",
+  "capability_id": "meridian_hosted.member.place_account_hold",
+  "capability_version": 1,
+  "started_at": "2026-09-05T08:39:45.721154Z",
+  "finished_at": "2026-09-05T08:39:49.280383Z",
+  "duration_ms": 3559,
+  "steps": [
+    {
+      "step_id": "go_to_the_signon",
+      "index": 0,
+      "intent": "Go to the signon page for MERIDIAN CORE servicing console",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 764,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 94,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_password",
+      "index": 2,
+      "intent": "Enter operator password",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "sign_on_with_the",
+      "index": 3,
+      "intent": "Sign on with the entered credentials",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 687,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "navigate_to_place_account",
+      "index": 4,
+      "intent": "Navigate to Place Account Hold flow, starting with member lookup",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 641,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_number_to",
+      "index": 5,
+      "intent": "Enter member number to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 77,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_the_member",
+      "index": 6,
+      "intent": "Search for the member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_the_member_to",
+      "index": 7,
+      "intent": "Select the member to open their record for the hold",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 608,
+      "checkpoint_ok": true,
+      "note": "business outcome SUPERVISOR_OVERRIDE_REQUIRED"
+    }
+  ],
+  "recoveries": [],
+  "escalations": [],
+  "control_ledger": [
+    {
+      "at": "2026-09-05T08:39:45.721155Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian_hosted.member.place_account_hold"
+    }
+  ],
+  "human_touched": false,
+  "evidence_dir": null,
+  "status": "business_outcome",
+  "code": "SUPERVISOR_OVERRIDE_REQUIRED",
+  "message": "This function needs a supervisor profile. Classified as an outcome rather than a failure because the caller can act on it -- re-invoke with supervisor credentials -- whereas escalating to a human would not help unless that human is themselves a supervisor.",
+  "signal_id": "supervisor_override_required",
+  "outputs": {},
+  "outputs_written": false,
+  "output_names": []
+}

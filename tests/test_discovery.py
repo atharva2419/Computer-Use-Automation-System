@@ -12,6 +12,7 @@ surface, the recorder and the policy are all exercised for real.
 
 from __future__ import annotations
 
+import json
 import socket
 import threading
 import time
@@ -328,8 +329,15 @@ def test_an_unverifiable_checkpoint_is_discarded(base_url: str) -> None:
     assert any("discarded proposed checkpoint" in n for n in result.notes)
 
 
-def test_a_false_success_claim_refuses_to_record(base_url: str) -> None:
-    """If the goal cannot be shown to be met, nothing is saved."""
+def test_a_false_success_claim_is_not_recorded(base_url: str) -> None:
+    """If the goal cannot be shown to be met, nothing is saved.
+
+    The run does not end there any more. Everything the recorder refuses at
+    emission is something the model can still fix -- it is looking at the page
+    and has budget left -- so the refusal is handed back as a tool result
+    instead of killing a paid run. What must never happen either way is a
+    capability written from a claim that does not hold.
+    """
     script = _happy_script(base_url)
     script[-1] = (
         "done",
@@ -341,9 +349,9 @@ def test_a_false_success_claim_refuses_to_record(base_url: str) -> None:
     finally:
         surface.close()
 
-    assert result.status == "failed"
-    assert result.capability is None
-    assert "does not hold" in result.reason
+    assert result.capability is None, "an unverifiable claim must not be recorded"
+    # And the model was told why, rather than the run dying without explanation.
+    assert "does not hold" in json.dumps(agent._messages, default=str)
 
 
 # ---------------------------------------------------------------------------
@@ -555,3 +563,39 @@ def test_label_anchor_is_not_circular():
 def test_short_values_are_left_alone():
     """A two-character coincidence is likelier than a real quotation."""
     assert not circular_anchor("No", "No")
+
+
+# --- declared inputs must actually be used -----------------------------------
+
+
+def test_an_unused_declared_input_is_refused(base_url: str) -> None:
+    """A parameter no step uses is a lie in the published interface.
+
+    Found on Place Account Hold: the model filled the share and the notes but
+    never touched the reason dropdown. Because FRAUD is the first option, the
+    recording succeeded -- and a caller asking for a LEGAL hold would have got
+    a FRAUD one, silently.
+
+    Refused rather than warned. Unlike a checkpoint that merely looks pinned to
+    one record, this is provable from the artifact alone.
+    """
+    script = _happy_script(base_url)
+    # Type the member id literally instead of as the parameter, so member_id
+    # ends up declared but unreferenced.
+    script[5] = (
+        "fill",
+        {"intent": "Type the member id", "frame": "main",
+         "label": "Member ID", "value": "10001"},
+    )
+    agent, session, surface, recorder = _agent(base_url, script)
+    # Break the literal-to-parameter promotion so the value stays a literal.
+    recorder._by_value = {}
+    try:
+        result = agent.discover("read the savings balance", f"{base_url}/login", BOUND)
+    finally:
+        surface.close()
+
+    assert result.capability is None, "a lying interface must not be recorded"
+    told = json.dumps(agent._messages, default=str)
+    assert "never used by any step" in told
+    assert "member_id" in told

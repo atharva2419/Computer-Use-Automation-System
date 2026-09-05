@@ -1,0 +1,209 @@
+{
+  "run_id": "186ab0a2b722",
+  "capability_id": "meridian_hosted.member.place_account_hold",
+  "capability_version": 1,
+  "started_at": "2026-09-05T08:45:12.113821Z",
+  "finished_at": "2026-09-05T08:45:19.160835Z",
+  "duration_ms": 7047,
+  "steps": [
+    {
+      "step_id": "go_to_the_signon",
+      "index": 0,
+      "intent": "Go to the signon page for MERIDIAN CORE servicing console",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 719,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_password",
+      "index": 2,
+      "intent": "Enter operator password",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 62,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "sign_on_with_the",
+      "index": 3,
+      "intent": "Sign on with the entered credentials",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 702,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "navigate_to_place_account",
+      "index": 4,
+      "intent": "Navigate to Place Account Hold flow, starting with member lookup",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_member_number_to",
+      "index": 5,
+      "intent": "Enter member number to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 63,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_the_member",
+      "index": 6,
+      "intent": "Search for the member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_the_member_to",
+      "index": 7,
+      "intent": "Select the member to open their record for the hold",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 625,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "set_share_dropdown_to",
+      "index": 8,
+      "intent": "Set share dropdown to 102777-MMKT-27",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 77,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "set_reason_code_dropdown",
+      "index": 9,
+      "intent": "Set reason code dropdown to LEGAL",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 61,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_notes_for_the",
+      "index": 10,
+      "intent": "Enter notes for the hold",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 63,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "continue_to_the_confirmation",
+      "index": 11,
+      "intent": "Continue to the confirmation screen",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 640,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "apply_the_account_hold",
+      "index": 12,
+      "intent": "Apply the account hold",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 2702,
+      "checkpoint_ok": true,
+      "note": ""
+    }
+  ],
+  "recoveries": [],
+  "escalations": [
+    {
+      "request_id": "db8fb47c58",
+      "step_id": "apply_the_account_hold",
+      "reason": "irreversible action on 'Apply Hold' requires operator approval",
+      "opened_at": "2026-09-05T08:45:16.445254Z",
+      "resolved_at": "2026-09-05T08:45:18.514421Z",
+      "resolution": "resumed",
+      "operator": "dashboard",
+      "human_actions": []
+    }
+  ],
+  "control_ledger": [
+    {
+      "at": "2026-09-05T08:45:12.113822Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian_hosted.member.place_account_hold"
+    },
+    {
+      "at": "2026-09-05T08:45:16.461150Z",
+      "from_actor": "agent",
+      "to_actor": "human",
+      "reason": "irreversible action on 'Apply Hold' requires operator approval"
+    },
+    {
+      "at": "2026-09-05T08:45:18.514421Z",
+      "from_actor": "human",
+      "to_actor": "agent",
+      "reason": "operator handed control back"
+    }
+  ],
+  "human_touched": true,
+  "evidence_dir": null,
+  "status": "success",
+  "outputs": {
+    "share_status": "[REDACTED:restricted str]"
+  },
+  "outputs_written": false,
+  "output_names": [
+    "share_status"
+  ]
+}

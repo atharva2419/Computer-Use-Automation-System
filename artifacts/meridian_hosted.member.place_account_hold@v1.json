@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "id": "meridian_hosted.member.transfer_funds",
+  "id": "meridian_hosted.member.place_account_hold",
   "version": 1,
-  "name": "Transfer funds between shares",
-  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. Then use Funds Transfer to move 1.00 from share 102777-MMKT-4 to share 102777-MMKT-3 with the memo capability-recording. Continue to the confirmation screen and post the transfer. Read back the confirmation reference the host returns.",
+  "name": "Place an account hold",
+  "description": "Sign on to the MERIDIAN CORE servicing console as supervisor super1. Look up member 102777 by member number and open their record. Open Place Account Hold. Set the share dropdown to 102777-MMKT-27, set the reason dropdown to LEGAL, and type the notes recorded-capability. Every one of those three fields must be set explicitly, including any dropdown that already shows the value you want. Continue to the confirmation screen and apply the hold. Then read back the status of that share.",
   "app": {
     "product": "meridian-hosted",
     "product_version": "v4.2.1",
@@ -26,48 +26,38 @@
       "name": "operator_id",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as 'teller1'.",
-      "example": "teller1",
+      "description": "Supplied at discovery as 'super1'.",
+      "example": "super1",
       "pattern": null,
       "sensitivity": "restricted",
       "secret": false
     },
     {
-      "name": "from_share",
+      "name": "share",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as '102777-MMKT-4'.",
-      "example": "102777-MMKT-4",
+      "description": "Supplied at discovery as '102777-MMKT-27'.",
+      "example": "102777-MMKT-27",
       "pattern": null,
       "sensitivity": "internal",
       "secret": false
     },
     {
-      "name": "to_share",
+      "name": "reason",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as '102777-MMKT-3'.",
-      "example": "102777-MMKT-3",
+      "description": "Supplied at discovery as 'LEGAL'.",
+      "example": "LEGAL",
       "pattern": null,
       "sensitivity": "internal",
       "secret": false
     },
     {
-      "name": "amount",
+      "name": "notes",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as '1.00'.",
-      "example": "1.00",
-      "pattern": null,
-      "sensitivity": "internal",
-      "secret": false
-    },
-    {
-      "name": "memo",
-      "type": "string",
-      "required": true,
-      "description": "Supplied at discovery as 'capability-recording'.",
-      "example": "capability-recording",
+      "description": "Supplied at discovery as 'recorded-capability'.",
+      "example": "recorded-capability",
       "pattern": null,
       "sensitivity": "internal",
       "secret": false
@@ -85,12 +75,12 @@
   ],
   "outputs": [
     {
-      "name": "confirmation_reference",
+      "name": "share_status",
       "type": "string",
       "description": "",
       "extract": {
         "target": {
-          "described_as": "Read confirmation reference number from transfer posted screen",
+          "described_as": "Read the resulting status of the share after the hold was applied",
           "frame": {
             "kind": "top",
             "value": null
@@ -98,12 +88,12 @@
           "strategies": [
             {
               "kind": "row_scoped_cell",
-              "row_contains": "Confirmation:",
+              "row_contains": "Share:",
               "cell_index": 1,
               "exact_row_text": false
             }
           ],
-          "rationale": "Anchored on the row containing 'Confirmation:' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
+          "rationale": "Anchored on the row containing 'Share:' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
         },
         "source": "text",
         "attribute": null,
@@ -113,14 +103,14 @@
         }
       },
       "required": true,
-      "after_step": "post_the_transfer",
+      "after_step": "apply_the_account_hold",
       "sensitivity": "restricted"
     }
   ],
   "steps": [
     {
-      "id": "go_to_sign_on",
-      "intent": "Go to sign-on page for MERIDIAN CORE console",
+      "id": "go_to_the_signon",
+      "intent": "Go to the signon page for MERIDIAN CORE servicing console",
       "action": {
         "kind": "navigate",
         "url": {
@@ -134,14 +124,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Sign On' is present after go_to_sign_on.",
+        "description": "'MERIDIAN CORE' is present after go_to_the_signon.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Sign On",
+          "text": "MERIDIAN CORE",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -266,12 +256,12 @@
       "signals": []
     },
     {
-      "id": "submit_sign_on_form",
-      "intent": "Submit sign on form",
+      "id": "sign_on_with_the",
+      "intent": "Sign on with the entered credentials",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Submit sign on form",
+          "described_as": "Sign on with the entered credentials",
           "frame": {
             "kind": "top",
             "value": null
@@ -295,7 +285,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Member Inquiry' is present after submit_sign_on_form.",
+        "description": "'Member Inquiry' is present after sign_on_with_the.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -311,12 +301,12 @@
       "signals": []
     },
     {
-      "id": "go_to_member_inquiry",
-      "intent": "Go to Member Inquiry / Selection",
+      "id": "navigate_to_place_account",
+      "intent": "Navigate to Place Account Hold flow, starting with member lookup",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Go to Member Inquiry / Selection",
+          "described_as": "Navigate to Place Account Hold flow, starting with member lookup",
           "frame": {
             "kind": "top",
             "value": null
@@ -325,22 +315,22 @@
             {
               "kind": "role_name",
               "role": "link",
-              "name": "Member Inquiry / Selection",
+              "name": "Place Account Hold",
               "exact": true
             },
             {
               "kind": "text",
-              "text": "Member Inquiry / Selection",
+              "text": "Place Account Hold",
               "element_role": null,
               "exact": true
             }
           ],
-          "rationale": "Control exposes role 'link' with accessible name 'Member Inquiry / Selection'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+          "rationale": "Control exposes role 'link' with accessible name 'Place Account Hold'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
         }
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Member Inquiry' is present after go_to_member_inquiry.",
+        "description": "'Member Inquiry' is present after navigate_to_place_account.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -356,12 +346,12 @@
       "signals": []
     },
     {
-      "id": "type_member_number_to",
-      "intent": "Type member number to search",
+      "id": "enter_member_number_to",
+      "intent": "Enter member number to search",
       "action": {
         "kind": "fill",
         "target": {
-          "described_as": "Type member number to search",
+          "described_as": "Enter member number to search",
           "frame": {
             "kind": "top",
             "value": null
@@ -398,7 +388,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MEMBER INQUIRY / SELECTION' is present after type_member_number_to.",
+        "description": "'MEMBER INQUIRY / SELECTION' is present after enter_member_number_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -414,12 +404,12 @@
       "signals": []
     },
     {
-      "id": "search_for_member",
-      "intent": "Search for member",
+      "id": "search_for_the_member",
+      "intent": "Search for the member",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Search for member",
+          "described_as": "Search for the member",
           "frame": {
             "kind": "top",
             "value": null
@@ -442,29 +432,17 @@
         }
       },
       "risk": "safe",
-      "checkpoint": {
-        "description": "'MEMBER' is present after search_for_member.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "MEMBER",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
+      "checkpoint": null,
       "timeout_ms": 10000,
       "signals": []
     },
     {
-      "id": "open_member_record",
-      "intent": "Open member record",
+      "id": "select_the_member_to",
+      "intent": "Select the member to open their record for the hold",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Open member record",
+          "described_as": "Select the member to open their record for the hold",
           "frame": {
             "kind": "top",
             "value": null
@@ -488,14 +466,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MEMBER RECORD' is present after open_member_record.",
+        "description": "'PLACE ACCOUNT HOLD' is present after select_the_member_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "MEMBER RECORD",
+          "text": "PLACE ACCOUNT HOLD",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -504,57 +482,12 @@
       "signals": []
     },
     {
-      "id": "open_funds_transfer_for",
-      "intent": "Open Funds Transfer for this member",
-      "action": {
-        "kind": "click",
-        "target": {
-          "described_as": "Open Funds Transfer for this member",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "strategies": [
-            {
-              "kind": "role_name",
-              "role": "link",
-              "name": "Funds Transfer",
-              "exact": true
-            },
-            {
-              "kind": "text",
-              "text": "Funds Transfer",
-              "element_role": null,
-              "exact": true
-            }
-          ],
-          "rationale": "Control exposes role 'link' with accessible name 'Funds Transfer'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
-        }
-      },
-      "risk": "safe",
-      "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after open_funds_transfer_for.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "FUNDS TRANSFER",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
-      "timeout_ms": 10000,
-      "signals": []
-    },
-    {
-      "id": "select_from_share_as_2",
-      "intent": "Select From Share as 102777-MMKT-4",
+      "id": "set_share_dropdown_to",
+      "intent": "Set share dropdown to 102777-MMKT-27",
       "action": {
         "kind": "select",
         "target": {
-          "described_as": "Select From Share as 102777-MMKT-4",
+          "described_as": "Set share dropdown to 102777-MMKT-27",
           "frame": {
             "kind": "top",
             "value": null
@@ -562,7 +495,7 @@
           "strategies": [
             {
               "kind": "label_cell",
-              "label": "From Share:",
+              "label": "Share:",
               "control": "combobox",
               "scope": "row",
               "occurrence": 0,
@@ -570,7 +503,7 @@
             },
             {
               "kind": "label_cell",
-              "label": "From Share:",
+              "label": "Share:",
               "control": "combobox",
               "scope": "following_cell",
               "occurrence": 0,
@@ -578,26 +511,26 @@
             },
             {
               "kind": "css",
-              "css": "[name=from]"
+              "css": "[name=share]"
             }
           ],
-          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'From Share:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='from' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Share:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='share' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
         },
         "value": {
           "kind": "param",
-          "param": "from_share"
+          "param": "share"
         }
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after select_from_share_as_2.",
+        "description": "'PLACE ACCOUNT HOLD' is present after set_share_dropdown_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "FUNDS TRANSFER",
+          "text": "PLACE ACCOUNT HOLD",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -606,12 +539,12 @@
       "signals": []
     },
     {
-      "id": "select_to_share_as",
-      "intent": "Select To Share as 102777-MMKT-3",
+      "id": "set_reason_code_dropdown",
+      "intent": "Set reason code dropdown to LEGAL",
       "action": {
         "kind": "select",
         "target": {
-          "described_as": "Select To Share as 102777-MMKT-3",
+          "described_as": "Set reason code dropdown to LEGAL",
           "frame": {
             "kind": "top",
             "value": null
@@ -619,7 +552,7 @@
           "strategies": [
             {
               "kind": "label_cell",
-              "label": "To Share:",
+              "label": "Reason Code:",
               "control": "combobox",
               "scope": "row",
               "occurrence": 0,
@@ -627,7 +560,7 @@
             },
             {
               "kind": "label_cell",
-              "label": "To Share:",
+              "label": "Reason Code:",
               "control": "combobox",
               "scope": "following_cell",
               "occurrence": 0,
@@ -635,26 +568,26 @@
             },
             {
               "kind": "css",
-              "css": "[name=to]"
+              "css": "[name=reason]"
             }
           ],
-          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'To Share:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='to' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Reason Code:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='reason' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
         },
         "value": {
           "kind": "param",
-          "param": "to_share"
+          "param": "reason"
         }
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after select_to_share_as.",
+        "description": "'PLACE ACCOUNT HOLD' is present after set_reason_code_dropdown.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "FUNDS TRANSFER",
+          "text": "PLACE ACCOUNT HOLD",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -663,12 +596,12 @@
       "signals": []
     },
     {
-      "id": "enter_transfer_amount",
-      "intent": "Enter transfer amount",
+      "id": "enter_notes_for_the",
+      "intent": "Enter notes for the hold",
       "action": {
         "kind": "fill",
         "target": {
-          "described_as": "Enter transfer amount",
+          "described_as": "Enter notes for the hold",
           "frame": {
             "kind": "top",
             "value": null
@@ -676,7 +609,7 @@
           "strategies": [
             {
               "kind": "label_cell",
-              "label": "Amount:",
+              "label": "Notes:",
               "control": "textbox",
               "scope": "row",
               "occurrence": 0,
@@ -684,7 +617,7 @@
             },
             {
               "kind": "label_cell",
-              "label": "Amount:",
+              "label": "Notes:",
               "control": "textbox",
               "scope": "following_cell",
               "occurrence": 0,
@@ -692,27 +625,27 @@
             },
             {
               "kind": "css",
-              "css": "[name=amount]"
+              "css": "[name=notes]"
             }
           ],
-          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Amount:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='amount' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Notes:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='notes' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
         },
         "value": {
           "kind": "param",
-          "param": "amount"
+          "param": "notes"
         },
         "clear_first": true
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after enter_transfer_amount.",
+        "description": "'PLACE ACCOUNT HOLD' is present after enter_notes_for_the.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "FUNDS TRANSFER",
+          "text": "PLACE ACCOUNT HOLD",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -721,70 +654,12 @@
       "signals": []
     },
     {
-      "id": "enter_memo",
-      "intent": "Enter memo",
-      "action": {
-        "kind": "fill",
-        "target": {
-          "described_as": "Enter memo",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "strategies": [
-            {
-              "kind": "label_cell",
-              "label": "Memo:",
-              "control": "textbox",
-              "scope": "row",
-              "occurrence": 0,
-              "exact_label": false
-            },
-            {
-              "kind": "label_cell",
-              "label": "Memo:",
-              "control": "textbox",
-              "scope": "following_cell",
-              "occurrence": 0,
-              "exact_label": false
-            },
-            {
-              "kind": "css",
-              "css": "[name=memo]"
-            }
-          ],
-          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Memo:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='memo' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
-        },
-        "value": {
-          "kind": "param",
-          "param": "memo"
-        },
-        "clear_first": true
-      },
-      "risk": "safe",
-      "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after enter_memo.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "FUNDS TRANSFER",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
-      "timeout_ms": 10000,
-      "signals": []
-    },
-    {
-      "id": "continue_to_confirmation_screen",
-      "intent": "Continue to confirmation screen",
+      "id": "continue_to_the_confirmation",
+      "intent": "Continue to the confirmation screen",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Continue to confirmation screen",
+          "described_as": "Continue to the confirmation screen",
           "frame": {
             "kind": "top",
             "value": null
@@ -808,7 +683,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'CONFIRM' is present after continue_to_confirmation_screen.",
+        "description": "'CONFIRM' is present after continue_to_the_confirmation.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -824,12 +699,12 @@
       "signals": []
     },
     {
-      "id": "post_the_transfer",
-      "intent": "Post the transfer",
+      "id": "apply_the_account_hold",
+      "intent": "Apply the account hold",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Post the transfer",
+          "described_as": "Apply the account hold",
           "frame": {
             "kind": "top",
             "value": null
@@ -838,33 +713,21 @@
             {
               "kind": "role_name",
               "role": "button",
-              "name": "Post Transfer",
+              "name": "Apply Hold",
               "exact": true
             },
             {
               "kind": "text",
-              "text": "Post Transfer",
+              "text": "Apply Hold",
               "element_role": null,
               "exact": true
             }
           ],
-          "rationale": "Control exposes role 'button' with accessible name 'Post Transfer'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+          "rationale": "Control exposes role 'button' with accessible name 'Apply Hold'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
         }
       },
       "risk": "irreversible",
-      "checkpoint": {
-        "description": "'CONFIRMATION' is present after post_the_transfer.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "CONFIRMATION",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
+      "checkpoint": null,
       "timeout_ms": 10000,
       "signals": []
     }
@@ -1071,24 +934,24 @@
     }
   ],
   "success": {
-    "description": "Goal reached: 'TRANSFER POSTED' is on screen.",
+    "description": "Goal reached: 'ACCOUNT HOLD APPLIED' is on screen.",
     "assertion": {
       "kind": "text_present",
       "frame": {
         "kind": "top",
         "value": null
       },
-      "text": "TRANSFER POSTED",
+      "text": "ACCOUNT HOLD APPLIED",
       "case_sensitive": false
     },
     "timeout_ms": 8000
   },
   "approval": "draft",
   "provenance": {
-    "discovered_at": "2026-09-05T04:42:11.239345Z",
+    "discovered_at": "2026-09-05T08:38:58.319918Z",
     "model": "claude-sonnet-5",
-    "discovery_run_id": "19c2144ada5c",
-    "transcript_digest": "7a88b6df82bf49b34c9fa6501431a818ddeda2e53be0c5b0ea1a1cf29d0cd09b",
+    "discovery_run_id": "4feaa105a978",
+    "transcript_digest": "83858fd64b96111e4af4e6098d47f5bfbf56691171d910b8643bf7cfe6cf9810",
     "recorded_by": "llm_discovery"
   },
   "tags": []

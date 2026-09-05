@@ -124,10 +124,23 @@ signals:
 
   - id: supervisor_override_required
     description: The operator profile is not entitled to this function.
+    # Detected on the denial's sentence, NOT on the heading.
+    #
+    # "SUPERVISOR OVERRIDE REQUIRED" is the obvious string and it is the wrong
+    # one. The Place Account Hold *form* carries it as a standing banner --
+    # "RESTRICTED FUNCTION - SUPERVISOR OVERRIDE REQUIRED" -- served with HTTP
+    # 200 to a supervisor who is fully entitled to be there. Matching the
+    # heading fired on every run that so much as opened the hold screen, which
+    # made the capability impossible to complete and made the teller-blocked
+    # demo pass for the wrong reason.
+    #
+    # The sentence below appears on the real 403 (natural denial and
+    # ?inject=permission alike) and on neither form. The operator name varies
+    # and is deliberately outside the match.
     detect:
       kind: text_present
       frame: {kind: top}
-      text: SUPERVISOR OVERRIDE REQUIRED
+      text: "is not authorized to perform this"
       case_sensitive: false
     classification: business_outcome
     outcome_code: SUPERVISOR_OVERRIDE_REQUIRED

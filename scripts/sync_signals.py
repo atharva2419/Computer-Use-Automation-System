@@ -71,16 +71,24 @@ def main() -> int:
             print(f"{DIM}  {path.name}: no signal library for {product!r}{RESET}")
             continue
 
-        before = {s.id for s in capability.signals}
-        after = {s.id for s in library}
+        # Compared by content, not by id. An earlier version compared the id
+        # sets, which meant a corrected *detection string* on an existing
+        # signal was reported as "up to date" -- the artifacts kept the broken
+        # matcher and the fix silently did nothing.
+        before = {s.id: s.model_dump(mode="json") for s in capability.signals}
+        after = {s.id: s.model_dump(mode="json") for s in library}
         if before == after:
             print(f"{DIM}  {path.name}: up to date ({len(after)} signals){RESET}")
             continue
 
         stale += 1
-        added, removed = sorted(after - before), sorted(before - after)
+        added = sorted(set(after) - set(before))
+        removed = sorted(set(before) - set(after))
+        changed = sorted(k for k in set(before) & set(after) if before[k] != after[k])
         detail = "".join(
-            [f" {GREEN}+{i}{RESET}" for i in added] + [f" {YELLOW}-{i}{RESET}" for i in removed]
+            [f" {GREEN}+{i}{RESET}" for i in added]
+            + [f" {YELLOW}~{i}{RESET}" for i in changed]
+            + [f" {YELLOW}-{i}{RESET}" for i in removed]
         )
         print(f"  {BOLD}{path.name}{RESET}:{detail}")
 

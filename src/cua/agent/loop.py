@@ -216,7 +216,7 @@ class DiscoveryAgent:
         self._note("model_action", tool=tool, args=self._loggable(args))
 
         if tool == "done":
-            return self._finish(args)
+            return self._finish(call)
         if tool == "stuck":
             return self._handle_stuck(call)
         if tool == "screenshot":
@@ -453,7 +453,20 @@ class DiscoveryAgent:
 
     # -- terminal states ---------------------------------------------------
 
-    def _finish(self, args: dict[str, Any]) -> DiscoveryResult:
+    def _finish(self, call: _Pending) -> DiscoveryResult | None:
+        """Try to emit the capability; hand a fixable refusal back to the model.
+
+        Everything the recorder refuses at emission is something the model is
+        still in a position to correct: a success condition that does not
+        hold, one that quotes the record it was recorded against, an input it
+        declared and never used. It is looking at the page and has budget
+        left, so telling it what was wrong is strictly better than ending a
+        paid run with a failure the operator has to read and re-drive.
+
+        Returning None continues the loop; the step and turn budgets still
+        bound how many attempts it gets.
+        """
+        args = call.args
         try:
             capability = self.recorder.finish(
                 success_text=args["success_text"],
@@ -464,7 +477,9 @@ class DiscoveryAgent:
                 transcript=self._transcript(),
             )
         except RecorderError as exc:
-            return self._result("failed", str(exc))
+            self._note("finish_refused", reason=self.redactor.text(str(exc)))
+            self._respond(call, f"Not finished yet. {exc}")
+            return None
         return self._result("recorded", args.get("summary", ""), capability=capability)
 
     def _handle_stuck(self, call: _Pending) -> DiscoveryResult | None:

@@ -8,6 +8,8 @@ lenient policy proves only that the code can enforce *something*.
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from cua.guardrails import (
@@ -308,3 +310,50 @@ def test_balances_are_not_redacted(policy: Policy) -> None:
     """
     redactor = policy.redactor()
     assert redactor.text("balance 4210.55") == "balance 4210.55"
+
+
+# --- the hosted target's policy, against its real controls -------------------
+#
+# Every control name below was read off the live application. The rules used to
+# key on the button's wording, on the observation that the transfer's terminal
+# button is "Post Transfer"; the other two are "Apply Hold" and "Open Share",
+# so opening a share fell through to the safe default and would have posted
+# with no approval. This pins the classification of every consequential control
+# so that regression cannot happen quietly again.
+
+HOSTED_POLICY = pathlib.Path("config/policy.meridian-hosted.yaml")
+
+
+@pytest.mark.parametrize(
+    ("route", "control", "expected"),
+    [
+        # The three terminal posts, all reached from a */review screen.
+        ("/members/102777/transfer/review", "Post Transfer", "irreversible"),
+        ("/members/102777/hold/review", "Apply Hold", "irreversible"),
+        ("/members/102777/open-share/review", "Open Share", "irreversible"),
+        # Leaving a confirmation screen is not the posting act.
+        ("/members/102777/transfer/review", "Cancel", "safe"),
+        # Reaching a confirmation screen posts nothing.
+        ("/members/102777/transfer", "Continue", "safe"),
+        ("/members/102777/open-share", "Continue", "safe"),
+        ("/members/102777/hold", "Continue", "safe"),
+        # A write an operator can undo through the same screen.
+        ("/members/102777/update", "Save Changes", "reversible_write"),
+        # Navigation and lookup.
+        ("/signon", "Sign On", "safe"),
+        ("/members", "Search", "safe"),
+        ("/members/102777", "Funds Transfer", "safe"),
+    ],
+)
+def test_hosted_policy_classifies_real_controls(route: str, control: str, expected: str):
+    risk = PolicyGate.from_file(HOSTED_POLICY).policy.risk
+    matched = next(
+        (r.risk for r in risk.rules if r.matches(route, "click", control)), risk.default
+    )
+    assert matched == expected
+
+
+def test_every_terminal_post_requires_a_human():
+    """The point of the classification, stated as the property it protects."""
+    policy = PolicyGate.from_file(HOSTED_POLICY).policy
+    assert policy.risk.handling["irreversible"] == "require_human"

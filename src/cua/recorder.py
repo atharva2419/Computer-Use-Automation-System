@@ -545,6 +545,30 @@ class Recorder:
             raise RecorderError("no steps were recorded")
 
         from . import assertions
+        from .schema.capability import _param_refs
+
+        # A declared input that no step uses is a lie in the interface. The
+        # caller reads the schema, supplies a value, and the value is silently
+        # dropped -- the recorded flow just takes whatever the screen already
+        # had. It surfaced on Place Account Hold: the model filled the share
+        # and the notes but never touched the reason dropdown, and because
+        # FRAUD is the first option the recording succeeded anyway. A caller
+        # asking for a LEGAL hold would have got a FRAUD one.
+        #
+        # Refused rather than warned, because unlike a checkpoint that merely
+        # looks pinned, this is provable from the artifact alone.
+        used = {ref for step in self.steps for ref in _param_refs(step.action)}
+        unused = [spec.name for spec in self.inputs if spec.name not in used]
+        if unused:
+            raise RecorderError(
+                "these declared inputs are never used by any step: "
+                + ", ".join(repr(u) for u in unused)
+                + ". A caller supplying one would have it silently ignored, so "
+                "the capability would misreport what it does. Set each of them "
+                "on the screen -- a dropdown left on its default value still "
+                "needs to be selected explicitly -- or the input should not be "
+                "declared."
+            )
 
         self._drop_invocation_specific_checkpoints()
 

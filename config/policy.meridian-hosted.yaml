@@ -46,11 +46,41 @@ risk:
   # reaching a confirmation screen is harmless and pressing the button on it
   # is the consequential act.
   rules:
-    - name: post an irreversible transaction
-      # Covers "Post Transfer", "Post Hold", "Post New Share" -- every
-      # terminal submit this application exposes is named "Post ...".
+    # Leaving a confirmation screen without acting on it. First, so that the
+    # catch-all below does not demand human approval to press Cancel.
+    - name: abandon a confirmation screen
+      route: "*/review"
       action: click
-      control: "post*"
+      control: "cancel*"
+      risk: safe
+
+    - name: go back from a confirmation screen
+      route: "*/review"
+      action: click
+      control: "back*"
+      risk: safe
+
+    # Every other click on a confirmation screen is the posting act.
+    #
+    # Keyed on the route rather than the button's name, and that distinction
+    # is not theoretical. An earlier version of this rule matched control
+    # "post*", on the observation that the transfer's terminal button is
+    # "Post Transfer". The other two are "Apply Hold" and "Open Share", so
+    # opening a share would have fallen through to the safe default and been
+    # posted with no approval at all. The button's wording is the vendor's
+    # choice and varies per screen; "the submit on a confirmation screen" is
+    # the actual shape of the application, and it is what this matches.
+    - name: submit a confirmation screen (posts the transaction)
+      route: "*/review"
+      action: click
+      risk: irreversible
+
+    # Belt and braces for a terminal control reached some other way -- a
+    # screen that posts without a separate review step would not match the
+    # rule above, and the naming convention is at least a partial signal.
+    - name: a control that posts or applies a transaction
+      action: click
+      control: "post *"
       risk: irreversible
 
     - name: place an account hold (supervisor-gated, freezes funds)
@@ -62,9 +92,16 @@ risk:
     - name: amend member contact details
       # Changes stored data but an operator can edit it back through the same
       # screen, so it is reversible rather than irreversible.
+      #
+      # Route only, no control glob. This rule used to require the control to
+      # match "*update*" and the button is called "Save Changes", so it never
+      # fired and amending a member's contact details was classified safe.
+      # Erring wide is the right direction here: the cost is that a nav link
+      # clicked from this screen is also recorded as reversible_write, which
+      # over-states one step's risk in the evidence; the cost of erring narrow
+      # was a write that no rule covered at all.
       route: "/members/*/update*"
       action: click
-      control: "*update*"
       risk: reversible_write
 
     - name: advance to a confirmation screen

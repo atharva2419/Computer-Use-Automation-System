@@ -612,7 +612,7 @@
           "kind": "top",
           "value": null
         },
-        "text": "SUPERVISOR OVERRIDE REQUIRED",
+        "text": "is not authorized to perform this",
         "case_sensitive": false
       },
       "classification": "business_outcome",
