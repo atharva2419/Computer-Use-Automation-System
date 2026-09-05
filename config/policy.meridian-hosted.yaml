@@ -46,6 +46,33 @@ risk:
   # reaching a confirmation screen is harmless and pressing the button on it
   # is the consequential act.
   rules:
+    # The persistent navigation bar, which this console renders on every
+    # screen. Listed first and unscoped by route: a nav link is chrome
+    # wherever it appears and never posts anything.
+    #
+    # Without this, the confirmation-screen rule below caught them. Discovery
+    # clicked "System Settings" from a review page, the click was classified
+    # irreversible, the recording operator approved it, and the session left
+    # for the fault-injection console -- which the allowlist denies, so it
+    # then could not act or navigate and spent fifty model turns stuck there.
+    # Over-classifying is not free.
+    - name: persistent navigation bar
+      action: click
+      control: "main menu"
+      risk: safe
+    - name: persistent navigation bar (member inquiry)
+      action: click
+      control: "member inquiry"
+      risk: safe
+    - name: persistent navigation bar (system settings)
+      action: click
+      control: "system settings"
+      risk: safe
+    - name: persistent navigation bar (sign off)
+      action: click
+      control: "sign off"
+      risk: safe
+
     # Leaving a confirmation screen without acting on it. First, so that the
     # catch-all below does not demand human approval to press Cancel.
     - name: abandon a confirmation screen

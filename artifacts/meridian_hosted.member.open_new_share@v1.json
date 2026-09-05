@@ -1,0 +1,954 @@
+{
+  "schema_version": "1.0.0",
+  "id": "meridian_hosted.member.open_new_share",
+  "version": 1,
+  "name": "Open a new share",
+  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. Open the Open New Share screen. Set the share type dropdown to MMKT and the initial deposit field to 25.00. Both fields must be set explicitly, including the dropdown even if it already shows the value you want. Continue to the confirmation screen and post it to open the share. Then read back the account number of the share that was created. Stay within the member servicing screens; do not visit System Settings.",
+  "app": {
+    "product": "meridian-hosted",
+    "product_version": "v4.2.1",
+    "tenant": null,
+    "entry_url": "https://web-sample.interface-hiring.com/signon",
+    "surface": "legacy_web"
+  },
+  "inputs": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as '102777'.",
+      "example": "102777",
+      "pattern": "^\\d{6}$",
+      "sensitivity": "restricted",
+      "secret": false
+    },
+    {
+      "name": "operator_id",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as 'teller1'.",
+      "example": "teller1",
+      "pattern": null,
+      "sensitivity": "restricted",
+      "secret": false
+    },
+    {
+      "name": "share_type",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as 'MMKT'.",
+      "example": "MMKT",
+      "pattern": null,
+      "sensitivity": "internal",
+      "secret": false
+    },
+    {
+      "name": "opening_deposit",
+      "type": "string",
+      "required": true,
+      "description": "Supplied at discovery as '25.00'.",
+      "example": "25.00",
+      "pattern": null,
+      "sensitivity": "internal",
+      "secret": false
+    },
+    {
+      "name": "operator_password",
+      "type": "string",
+      "required": true,
+      "description": "Operator credential.",
+      "example": null,
+      "pattern": null,
+      "sensitivity": "restricted",
+      "secret": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "new_share_account_number",
+      "type": "string",
+      "description": "",
+      "extract": {
+        "target": {
+          "described_as": "Read the new share account number created",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "row_scoped_cell",
+              "row_contains": "New Share ID:",
+              "cell_index": 1,
+              "exact_row_text": false
+            }
+          ],
+          "rationale": "Anchored on the row containing 'New Share ID:' rather than an absolute row index, so inserting or reordering rows does not read the wrong value."
+        },
+        "source": "text",
+        "attribute": null,
+        "transform": {
+          "kind": "strip",
+          "pattern": null
+        }
+      },
+      "required": true,
+      "after_step": "post_the_share_opening",
+      "sensitivity": "restricted"
+    }
+  ],
+  "steps": [
+    {
+      "id": "open_the_sign_on",
+      "intent": "Open the sign-on page for the servicing console",
+      "action": {
+        "kind": "navigate",
+        "url": {
+          "kind": "literal",
+          "value": "https://web-sample.interface-hiring.com/signon"
+        },
+        "frame": {
+          "kind": "top",
+          "value": null
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Sign On' is present after open_the_sign_on.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "Sign On",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_operator_id",
+      "intent": "Enter operator ID",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter operator ID",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Operator ID:",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Operator ID:",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=operator]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Operator ID:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='operator' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'OPERATOR SIGN ON' is present after enter_operator_id.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPERATOR SIGN ON",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_operator_password",
+      "intent": "Enter operator password",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter operator password",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Password:",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Password:",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=password]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Password:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='password' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "operator_password"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'OPERATOR SIGN ON' is present after enter_operator_password.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPERATOR SIGN ON",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "submit_sign_on",
+      "intent": "Submit sign on",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Submit sign on",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Sign On",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Sign On",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Sign On'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Member Inquiry' is present after submit_sign_on.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "Member Inquiry",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "go_to_member_inquiry",
+      "intent": "Go to Member Inquiry to look up member by number",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Go to Member Inquiry to look up member by number",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Member Inquiry / Selection",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Member Inquiry / Selection",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'link' with accessible name 'Member Inquiry / Selection'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'Member Inquiry' is present after go_to_member_inquiry.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "Member Inquiry",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_member_number_to",
+      "intent": "Enter member number to search",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter member number to search",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Value:",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Value:",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=q]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Value:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='q' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "member_id"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'MEMBER INQUIRY' is present after enter_member_number_to.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "MEMBER INQUIRY",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "search_for_member",
+      "intent": "Search for member",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Search for member",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Search",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Search",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Search'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'MEMBER' is present after search_for_member.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "MEMBER",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "open_member_record",
+      "intent": "Open member record",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Open member record",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Select",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Select",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'link' with accessible name 'Select'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'MEMBER RECORD' is present after open_member_record.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "MEMBER RECORD",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "open_the_open_new",
+      "intent": "Open the Open New Share screen for this member",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Open the Open New Share screen for this member",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "text",
+              "text": "Open New Share",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Non-semantic control with no interactive role; 'Open New Share' is the only thing that identifies it, as it is for a human."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'OPEN NEW SHARE' is present after open_the_open_new.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPEN NEW SHARE",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "set_share_type_to",
+      "intent": "Set share type to Money Market (MMKT)",
+      "action": {
+        "kind": "select",
+        "target": {
+          "described_as": "Set share type to Money Market (MMKT)",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Share Type:",
+              "control": "combobox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Share Type:",
+              "control": "combobox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=type]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Share Type:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='type' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "share_type"
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'OPEN NEW SHARE' is present after set_share_type_to.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPEN NEW SHARE",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "enter_initial_deposit_amount",
+      "intent": "Enter initial deposit amount",
+      "action": {
+        "kind": "fill",
+        "target": {
+          "described_as": "Enter initial deposit amount",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "label_cell",
+              "label": "Initial Deposit:",
+              "control": "textbox",
+              "scope": "row",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "label_cell",
+              "label": "Initial Deposit:",
+              "control": "textbox",
+              "scope": "following_cell",
+              "occurrence": 0,
+              "exact_label": false
+            },
+            {
+              "kind": "css",
+              "css": "[name=deposit]"
+            }
+          ],
+          "rationale": "The control has no accessible name, so role+name cannot address it at all. It is identified the way an operator does: by the visible label 'Initial Deposit:' in the same table row. A following-cell variant covers layouts where the label and control are siblings rather than row-mates. A structural selector on name='deposit' is appended last: brittle by nature, but on surfaces this hostile it is sometimes the only thing left, and replay records when it is the strategy that had to be used."
+        },
+        "value": {
+          "kind": "param",
+          "param": "opening_deposit"
+        },
+        "clear_first": true
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'OPEN NEW SHARE' is present after enter_initial_deposit_amount.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPEN NEW SHARE",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "continue_to_confirmation_screen",
+      "intent": "Continue to confirmation screen",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Continue to confirmation screen",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Continue",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Continue",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Continue'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "description": "'CONFIRM' is present after continue_to_confirmation_screen.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "CONFIRM",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    },
+    {
+      "id": "post_the_share_opening",
+      "intent": "Post the share opening",
+      "action": {
+        "kind": "click",
+        "target": {
+          "described_as": "Post the share opening",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "button",
+              "name": "Open Share",
+              "exact": true
+            },
+            {
+              "kind": "text",
+              "text": "Open Share",
+              "element_role": null,
+              "exact": true
+            }
+          ],
+          "rationale": "Control exposes role 'button' with accessible name 'Open Share'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
+        }
+      },
+      "risk": "irreversible",
+      "checkpoint": {
+        "description": "'Share' is present after post_the_share_opening.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "Share",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
+      "timeout_ms": 10000,
+      "signals": []
+    }
+  ],
+  "signals": [
+    {
+      "id": "member_not_found",
+      "description": "The host returned its Record Not Found screen. This is the injected fault (?inject=notfound) and the wording used when a record is missing at the point of retrieval rather than at search time.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "RECORD NOT FOUND",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "MEMBER_NOT_FOUND",
+      "recovery": null,
+      "escalate": false,
+      "message": "No member record matches the supplied identifier."
+    },
+    {
+      "id": "member_search_empty",
+      "description": "A member search completed and matched no records.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "No member records matched your search",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "MEMBER_NOT_FOUND",
+      "recovery": null,
+      "escalate": false,
+      "message": "No member record matches the supplied identifier."
+    },
+    {
+      "id": "transaction_rejected",
+      "description": "The host returned its Transaction Rejected screen. This is the injected validation fault (?inject=validation).",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "TRANSACTION REJECTED",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "TRANSACTION_REJECTED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The host rejected the transaction as entered."
+    },
+    {
+      "id": "transfer_validation_failed",
+      "description": "The host refused the transfer as entered -- most often insufficient available balance in the source share.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "The transaction could not be validated",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "TRANSACTION_REJECTED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The host refused the transfer as entered and no funds moved. This is an answer to the request, not a breakdown of the automation."
+    },
+    {
+      "id": "field_validation_failed",
+      "description": "The host refused one or more submitted field values as malformed.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "Please correct the following",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "INPUT_REJECTED",
+      "recovery": null,
+      "escalate": false,
+      "message": "The host rejected the values submitted. Nothing was changed; the individual reasons are listed on the screen."
+    },
+    {
+      "id": "supervisor_override_required",
+      "description": "The operator profile is not entitled to this function.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "is not authorized to perform this",
+        "case_sensitive": false
+      },
+      "classification": "business_outcome",
+      "outcome_code": "SUPERVISOR_OVERRIDE_REQUIRED",
+      "recovery": null,
+      "escalate": false,
+      "message": "This function needs a supervisor profile. Classified as an outcome rather than a failure because the caller can act on it -- re-invoke with supervisor credentials -- whereas escalating to a human would not help unless that human is themselves a supervisor."
+    },
+    {
+      "id": "maintenance_interstitial",
+      "description": "Unscheduled maintenance notice blocking the flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "SCHEDULED MAINTENANCE IN PROGRESS",
+        "case_sensitive": false
+      },
+      "classification": "recoverable",
+      "outcome_code": null,
+      "recovery": {
+        "kind": "dismiss_and_retry",
+        "dismiss": {
+          "described_as": "the Continue link on the maintenance interstitial",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Continue",
+              "exact": true
+            }
+          ],
+          "rationale": "Dismissal control for the maintenance notice. Identified by role and name because the same word labels a submit button elsewhere in this application."
+        },
+        "max_attempts": 2
+      },
+      "escalate": false,
+      "message": "Dismissed the maintenance notice and retried the step."
+    },
+    {
+      "id": "session_timed_out",
+      "description": "The operator session ended mid-flow.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "YOUR SESSION HAS TIMED OUT",
+        "case_sensitive": false
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": true,
+      "message": "The servicing session ended mid-flow. Re-authenticating unattended is deliberately not automated: it would mean holding and replaying operator credentials outside the invocation that supplied them, and a blind retry against an unknown rejection risks locking the profile. A human re-establishes the session and hands control back."
+    },
+    {
+      "id": "application_error",
+      "description": "The host returned an unhandled fault page.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "APPLICATION ERROR",
+        "case_sensitive": false
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": false,
+      "message": "The application returned an unexpected fault. The page carries a reference code for the help desk; nothing about the flow can be assumed from here, so the run stops."
+    },
+    {
+      "id": "signon_rejected",
+      "description": "The supplied operator credentials were refused.",
+      "detect": {
+        "kind": "text_present",
+        "frame": {
+          "kind": "top",
+          "value": null
+        },
+        "text": "Invalid operator ID or password",
+        "case_sensitive": false
+      },
+      "classification": "hard_failure",
+      "outcome_code": null,
+      "recovery": null,
+      "escalate": false,
+      "message": "Sign-on was refused. Treated as a hard failure rather than a business outcome: the caller supplied credentials that do not work, which is a fault in the invocation rather than an answer about a member. Not escalated, because a human operator cannot fix credentials the caller passed in."
+    }
+  ],
+  "success": {
+    "description": "Goal reached: 'NEW SHARE ESTABLISHED' is on screen.",
+    "assertion": {
+      "kind": "text_present",
+      "frame": {
+        "kind": "top",
+        "value": null
+      },
+      "text": "NEW SHARE ESTABLISHED",
+      "case_sensitive": false
+    },
+    "timeout_ms": 8000
+  },
+  "approval": "draft",
+  "provenance": {
+    "discovered_at": "2026-09-05T21:31:59.164757Z",
+    "model": "claude-sonnet-5",
+    "discovery_run_id": "825ce63f8375",
+    "transcript_digest": "265e2e5413a13ab314bf0eb2e6f4ad568c144f02bcfe0d440a612379ecc157f1",
+    "recorded_by": "llm_discovery"
+  },
+  "tags": []
+}

@@ -223,6 +223,34 @@ class PolicyGate:
                 reason=f"no page is loaded, so a {kind} action has no target",
             )
 
+        # Leaving a page we should not be on is always permitted.
+        #
+        # A click cannot be checked against its destination -- nothing knows
+        # where a link goes until it is followed -- so the session can always
+        # be walked onto a denied route by one click. If being there then
+        # refuses every action, including navigating away, the run is trapped:
+        # discovery burned fifty model turns on a console it was not allowed
+        # to touch and could not leave, escalating to a human each time.
+        #
+        # A deny rule is meant to keep the automation *out* of a route, not to
+        # freeze it there. So an explicit navigation to a permitted URL is let
+        # through even when the current page is denied. Everything else on a
+        # denied page stays refused, which is what keeps the fault-injection
+        # console off limits.
+        escaping = (
+            kind == "navigate"
+            and bool(request.target_url)
+            and self.policy.url_allowed(request.target_url)[0]
+            and on_a_page
+            and not self.policy.url_allowed(request.current_url)[0]
+        )
+        if escaping:
+            return GateDecision(
+                allowed=True,
+                risk="safe",
+                reason="navigating away from a route the policy denies",
+            )
+
         for url in to_check:
             ok, reason = self.policy.url_allowed(url)
             if not ok:

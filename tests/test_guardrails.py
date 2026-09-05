@@ -357,3 +357,103 @@ def test_every_terminal_post_requires_a_human():
     """The point of the classification, stated as the property it protects."""
     policy = PolicyGate.from_file(HOSTED_POLICY).policy
     assert policy.risk.handling["irreversible"] == "require_human"
+
+
+# --- a deny rule must not become a trap --------------------------------------
+
+
+def _hosted_gate(discovery: bool = False) -> PolicyGate:
+    return PolicyGate.from_file(HOSTED_POLICY, discovery=discovery)
+
+
+def _click(name: str) -> Step:
+    return Step(
+        id="s",
+        intent="click something",
+        action=ClickAction(
+            target=Target(
+                described_as=f"the {name} link",
+                frame=FrameRef(),
+                strategies=[RoleNameStrategy(role="link", name=name)],
+            )
+        ),
+    )
+
+
+def _navigate(url: str) -> Step:
+    return Step(
+        id="s",
+        intent="go somewhere",
+        action=NavigateAction(url=LiteralValue(value=url)),
+    )
+
+
+HOST = "https://web-sample.interface-hiring.com"
+
+
+def _decide(gate: PolicyGate, step: Step, current: str, target: str = "") -> GateDecision:
+    return gate.check(
+        GateRequest(
+            capability=_capability(step),
+            step=step,
+            step_index=0,
+            current_url=current,
+            target_url=target,
+        )
+    )
+
+
+def test_denied_route_still_permits_navigating_away():
+    """Being somewhere forbidden is a state to escape, not to freeze in.
+
+    A click cannot be checked against its destination, so one click can always
+    land the session on a denied route. If every action is then refused --
+    including leaving -- the run is trapped. Discovery hit exactly this: it
+    reached /settings and spent fifty model turns unable to act or leave,
+    escalating to a human on every attempt.
+    """
+    gate = _hosted_gate()
+    decision = _decide(
+        gate, _navigate(f"{HOST}/menu"), current=f"{HOST}/settings", target=f"{HOST}/menu"
+    )
+    assert decision.allowed, decision.reason
+    assert "denies" in decision.reason
+
+
+def test_denied_route_still_refuses_acting_on_it():
+    """The escape hatch must not become a way to use the forbidden console."""
+    gate = _hosted_gate()
+    decision = _decide(gate, _click("Apply Settings"), current=f"{HOST}/settings")
+    assert not decision.allowed
+    assert "/settings" in decision.reason
+
+
+def test_cannot_escape_to_another_denied_route():
+    gate = _hosted_gate()
+    decision = _decide(
+        gate,
+        _navigate(f"{HOST}/settings?x=1"),
+        current=f"{HOST}/settings",
+        target=f"{HOST}/settings?x=1",
+    )
+    assert not decision.allowed
+
+
+@pytest.mark.parametrize("control", ["Main Menu", "Member Inquiry", "System Settings", "Sign Off"])
+def test_navigation_bar_is_never_a_transaction(control: str):
+    """The nav bar renders on every screen, including confirmation screens.
+
+    The confirmation-screen rule used to catch these, so clicking "System
+    Settings" from a review page was classified irreversible -- which is how
+    discovery came to be approved into the fault-injection console.
+    """
+    risk = PolicyGate.from_file(HOSTED_POLICY).policy.risk
+    matched = next(
+        (
+            r.risk
+            for r in risk.rules
+            if r.matches("/members/102777/open-share/review", "click", control)
+        ),
+        risk.default,
+    )
+    assert matched == "safe"
