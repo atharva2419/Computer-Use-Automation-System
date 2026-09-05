@@ -16,8 +16,11 @@ from pathlib import Path
 
 # The wrapper lives at the repository root rather than inside the installed
 # package, so that a diff of the adaptation shows the core untouched. Running
-# a file in scripts/ puts scripts/ on the path, not the root -- so put it there.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# a file in scripts/ puts scripts/ on the path, not the root -- so put it there,
+# along with src/, so the service starts whether or not cua was pip-installed.
+_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(1, str(_ROOT / "src"))
 
 import uvicorn  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402

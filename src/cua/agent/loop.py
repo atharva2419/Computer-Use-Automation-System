@@ -622,6 +622,15 @@ class DiscoveryAgent:
     def _result(
         self, status: str, reason: str, capability: Capability | None = None
     ) -> DiscoveryResult:
+        # The recorder's notes say what it refused to write down and why -- a
+        # checkpoint quoting the member it was recorded against, a locator
+        # anchored on its own answer. That reasoning is most of what makes the
+        # artifact trustworthy, and printing it to a terminal that scrolls is
+        # not recording it. It belongs in the evidence beside the run.
+        if self.sink is not None:
+            for note in self.recorder.notes:
+                self.sink.note("recorder_note", detail=self.redactor.text(note))
+
         return DiscoveryResult(
             run_id=self.run_id,
             status=status,

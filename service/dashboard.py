@@ -22,6 +22,7 @@ read and checked than a framework would.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,7 @@ def build_router(
                 "capabilities": catalog.listing(product=product),
                 "products": catalog.products(),
                 "selected": product,
+                "operator_id": os.environ.get("CUA_OPERATOR_ID", ""),
                 "artifact_dir": str(artifact_dir),
             },
         )

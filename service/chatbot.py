@@ -36,7 +36,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .catalog import CapabilityCatalog, CatalogEntry
+from .catalog import (
+    CapabilityCatalog,
+    CatalogEntry,
+    operator_credentials,
+    server_supplied,
+)
 
 # Sonnet rather than Opus, matching the discovery agent's default (CUA_MODEL).
 # Picking one of a handful of named capabilities is a much easier judgement
@@ -82,45 +87,6 @@ class Planner(Protocol):
 # ---------------------------------------------------------------------------
 # Tool definitions
 # ---------------------------------------------------------------------------
-
-
-# Inputs that identify the signed-in operator rather than the request. The
-# console has one operator signed on at a time, so these come from the
-# environment, not from whoever is typing.
-_OPERATOR_INPUTS = frozenset({"operator_id", "operator_password", "operator_passphrase"})
-
-
-def server_supplied(capability: Any) -> set[str]:
-    """Inputs the service fills in, so nobody is asked for them.
-
-    Secrets, and the operator identity that goes with them. Signing on as one
-    operator with another's id is not a request a caller should be able to
-    make in passing, and a password is not something a conversation should
-    ever carry -- so both are decided by the service, once.
-    """
-    return {
-        spec.name
-        for spec in capability.inputs
-        if spec.secret or spec.name in _OPERATOR_INPUTS
-    }
-
-
-def operator_credentials(capability: Any) -> dict[str, str]:
-    """The signed-in operator's credentials for one capability.
-
-    Read from the environment at invocation, after planning. The planner
-    proposed a capability and its business arguments; it never saw these and
-    could not have supplied them.
-    """
-    env = {
-        "operator_id": os.environ.get("CUA_OPERATOR_ID", ""),
-        "operator_password": os.environ.get("CUA_OPERATOR_PASSWORD", ""),
-        "operator_passphrase": os.environ.get("CUA_OPERATOR_PASSWORD", ""),
-    }
-    supplied = server_supplied(capability)
-    return {
-        name: env[name] for name in supplied if env.get(name)
-    }
 
 
 def tool_definitions(entries: list[CatalogEntry]) -> list[dict[str, Any]]:

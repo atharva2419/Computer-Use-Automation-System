@@ -32,8 +32,13 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from .catalog import CapabilityCatalog, CapabilityNotApproved, CapabilityNotFound
-from .chatbot import build_planner, operator_credentials, summarise
+from .catalog import (
+    CapabilityCatalog,
+    CapabilityNotApproved,
+    CapabilityNotFound,
+    operator_credentials,
+)
+from .chatbot import build_planner, summarise
 from .dashboard import build_router
 from .runner import CapabilityRunner
 
@@ -151,9 +156,23 @@ def create_app(
         and one that stops for a human may wait minutes -- holding an HTTP
         connection open for that is the wrong shape, and it would make the
         escalation path impossible to express.
+
+        Operator credentials are filled in from the environment when the caller
+        omits them, exactly as they are for the chatbot. The service holds the
+        operator session the way a signed-on teller terminal does; a calling
+        agent is supposed to invoke a capability by name with business
+        arguments and know nothing else, and requiring it to carry a password
+        to do that would defeat the point. An explicitly supplied value still
+        wins, so a caller that does have its own operator can say so.
         """
         try:
-            run = runner.submit(name, request.arguments, allow_draft=request.supervised)
+            capability = catalog.get(name)
+        except CapabilityNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+        arguments = {**operator_credentials(capability), **request.arguments}
+        try:
+            run = runner.submit(name, arguments, allow_draft=request.supervised)
         except CapabilityNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
         except CapabilityNotApproved as exc:

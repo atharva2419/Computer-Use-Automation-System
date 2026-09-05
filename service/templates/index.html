@@ -45,17 +45,35 @@
       </p>
     {% endif %}
 
+    {# Which application this capability drives. Worth showing: the catalog
+       holds capabilities for more than one target, and invoking one whose app
+       is not running is otherwise a confusing ten-second failure. #}
+    <p class="dim mono" style="margin:9px 0 0; font-size:11px">{{ c.entry_url }}</p>
+
     <form class="invoke" data-name="{{ c.capability_id }}" data-draft="{{ 0 if c.invocable_unattended else 1 }}">
       {% for field, spec in c.input_schema.properties.items() %}
-        <label for="{{ c.capability_id }}--{{ field }}">
-          {{ field }}{% if field in c.input_schema.required %} *{% endif %}
-          {% if spec.writeOnly %}<span class="badge b-warn" style="margin-left:6px">secret</span>{% endif %}
-        </label>
-        <input id="{{ c.capability_id }}--{{ field }}" name="{{ field }}"
-               type="{{ 'password' if spec.writeOnly else 'text' }}"
-               value="{{ spec.examples[0] if spec.examples else '' }}"
-               placeholder="{{ spec.description }}">
+        {# Operator credentials are not asked for. The service signs on with
+           the operator in its environment, the way a teller terminal holds one
+           session -- so there is nothing here for anyone to type or mistype. #}
+        {% if field not in c.server_supplied %}
+          <label for="{{ c.capability_id }}--{{ field }}">
+            {{ field }}{% if field in c.input_schema.required %} *{% endif %}
+          </label>
+          <input id="{{ c.capability_id }}--{{ field }}" name="{{ field }}"
+                 {% if field in c.input_schema.required %}data-required="1"{% endif %}
+                 type="text"
+                 value="{{ spec.examples[0] if spec.examples else '' }}"
+                 placeholder="{{ spec.description }}">
+        {% endif %}
       {% endfor %}
+
+      {% if c.server_supplied %}
+        <p class="dim" style="margin:11px 0 0; font-size:12px">
+          Signed on from the environment as
+          <span class="mono">{{ operator_id or 'CUA_OPERATOR_ID (unset)' }}</span>
+          &mdash; {{ c.server_supplied | join(', ') }} are supplied by the service.
+        </p>
+      {% endif %}
 
       {% if not c.invocable_unattended %}
         <div class="note" style="margin-top:14px">
@@ -99,6 +117,20 @@ document.querySelectorAll("form.invoke").forEach(form => {
     ev.preventDefault();
     const out = form.querySelector(".result");
     const btn = form.querySelector("button[type=submit]");
+
+    // Checked here rather than left to the replay. A missing required
+    // argument is refused before the run starts anyway, but finding that out
+    // ten seconds later, after a browser has opened and signed on, reads like
+    // a fault in the system rather than a blank field.
+    const empty = [...form.querySelectorAll("input[data-required]")]
+      .filter(i => i.value.trim() === "");
+    if (empty.length) {
+      empty[0].focus();
+      out.innerHTML = '<span class="b-warn">' + esc(empty.map(i => i.name).join(", "))
+        + " required</span>";
+      return;
+    }
+
     const args = {};
     form.querySelectorAll("input[name]").forEach(i => {
       if (i.value !== "") args[i.name] = i.value;
