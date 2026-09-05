@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "id": "meridian_hosted.member.transfer_funds",
   "version": 1,
-  "name": "Transfer funds between a member's shares",
-  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. Then use Funds Transfer to move 1.00 from share 102777-MMKT-3 to share 102777-MMKT-4 with the memo capability-recording. Continue to the confirmation screen and post the transfer. Read back the confirmation reference the host returns.",
+  "name": "Transfer funds between shares",
+  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. Then use Funds Transfer to move 1.00 from share 102777-MMKT-4 to share 102777-MMKT-3 with the memo capability-recording. Continue to the confirmation screen and post the transfer. Read back the confirmation reference the host returns.",
   "app": {
     "product": "meridian-hosted",
     "product_version": "v4.2.1",
@@ -36,8 +36,8 @@
       "name": "from_share",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as '102777-MMKT-3'.",
-      "example": "102777-MMKT-3",
+      "description": "Supplied at discovery as '102777-MMKT-4'.",
+      "example": "102777-MMKT-4",
       "pattern": null,
       "sensitivity": "internal",
       "secret": false
@@ -46,8 +46,8 @@
       "name": "to_share",
       "type": "string",
       "required": true,
-      "description": "Supplied at discovery as '102777-MMKT-4'.",
-      "example": "102777-MMKT-4",
+      "description": "Supplied at discovery as '102777-MMKT-3'.",
+      "example": "102777-MMKT-3",
       "pattern": null,
       "sensitivity": "internal",
       "secret": false
@@ -90,7 +90,7 @@
       "description": "",
       "extract": {
         "target": {
-          "described_as": "Read the confirmation reference number",
+          "described_as": "Read confirmation reference number from transfer posted screen",
           "frame": {
             "kind": "top",
             "value": null
@@ -113,14 +113,14 @@
         }
       },
       "required": true,
-      "after_step": "post_the_funds_transfer",
+      "after_step": "post_the_transfer",
       "sensitivity": "restricted"
     }
   ],
   "steps": [
     {
-      "id": "go_to_the_meridian",
-      "intent": "Go to the MERIDIAN CORE servicing console sign-on page",
+      "id": "go_to_sign_on",
+      "intent": "Go to sign-on page for MERIDIAN CORE console",
       "action": {
         "kind": "navigate",
         "url": {
@@ -134,7 +134,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Sign On' is present after go_to_the_meridian.",
+        "description": "'Sign On' is present after go_to_sign_on.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -192,14 +192,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'teller1' is present after enter_operator_id.",
+        "description": "'OPERATOR SIGN ON' is present after enter_operator_id.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "teller1",
+          "text": "OPERATOR SIGN ON",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -249,17 +249,29 @@
         "clear_first": true
       },
       "risk": "safe",
-      "checkpoint": null,
+      "checkpoint": {
+        "description": "'OPERATOR SIGN ON' is present after enter_operator_password.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "OPERATOR SIGN ON",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
       "timeout_ms": 10000,
       "signals": []
     },
     {
-      "id": "submit_sign_on",
-      "intent": "Submit sign on",
+      "id": "submit_sign_on_form",
+      "intent": "Submit sign on form",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Submit sign on",
+          "described_as": "Submit sign on form",
           "frame": {
             "kind": "top",
             "value": null
@@ -283,7 +295,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Member Inquiry' is present after submit_sign_on.",
+        "description": "'Member Inquiry' is present after submit_sign_on_form.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -344,12 +356,12 @@
       "signals": []
     },
     {
-      "id": "enter_member_number_to",
-      "intent": "Enter member number to search",
+      "id": "type_member_number_to",
+      "intent": "Type member number to search",
       "action": {
         "kind": "fill",
         "target": {
-          "described_as": "Enter member number to search",
+          "described_as": "Type member number to search",
           "frame": {
             "kind": "top",
             "value": null
@@ -386,14 +398,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'102777' is present after enter_member_number_to.",
+        "description": "'MEMBER INQUIRY / SELECTION' is present after type_member_number_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "102777",
+          "text": "MEMBER INQUIRY / SELECTION",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -431,14 +443,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'102777' is present after search_for_member.",
+        "description": "'MEMBER' is present after search_for_member.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "102777",
+          "text": "MEMBER",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -447,12 +459,12 @@
       "signals": []
     },
     {
-      "id": "open_the_member_record",
-      "intent": "Open the member record for 102777",
+      "id": "open_member_record",
+      "intent": "Open member record",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Open the member record for 102777",
+          "described_as": "Open member record",
           "frame": {
             "kind": "top",
             "value": null
@@ -476,14 +488,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Johnson, Katherine' is present after open_the_member_record.",
+        "description": "'MEMBER RECORD' is present after open_member_record.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Johnson, Katherine",
+          "text": "MEMBER RECORD",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -492,12 +504,12 @@
       "signals": []
     },
     {
-      "id": "go_to_funds_transfer",
-      "intent": "Go to Funds Transfer for this member",
+      "id": "open_funds_transfer_for",
+      "intent": "Open Funds Transfer for this member",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Go to Funds Transfer for this member",
+          "described_as": "Open Funds Transfer for this member",
           "frame": {
             "kind": "top",
             "value": null
@@ -521,7 +533,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'FUNDS TRANSFER' is present after go_to_funds_transfer.",
+        "description": "'FUNDS TRANSFER' is present after open_funds_transfer_for.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -537,12 +549,12 @@
       "signals": []
     },
     {
-      "id": "select_from_share_102777_2",
-      "intent": "Select from share 102777-MMKT-3",
+      "id": "select_from_share_as_2",
+      "intent": "Select From Share as 102777-MMKT-4",
       "action": {
         "kind": "select",
         "target": {
-          "described_as": "Select from share 102777-MMKT-3",
+          "described_as": "Select From Share as 102777-MMKT-4",
           "frame": {
             "kind": "top",
             "value": null
@@ -578,14 +590,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'102777-MMKT-3' is present after select_from_share_102777_2.",
+        "description": "'FUNDS TRANSFER' is present after select_from_share_as_2.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "102777-MMKT-3",
+          "text": "FUNDS TRANSFER",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -594,12 +606,12 @@
       "signals": []
     },
     {
-      "id": "select_to_share_102777",
-      "intent": "Select to share 102777-MMKT-4",
+      "id": "select_to_share_as",
+      "intent": "Select To Share as 102777-MMKT-3",
       "action": {
         "kind": "select",
         "target": {
-          "described_as": "Select to share 102777-MMKT-4",
+          "described_as": "Select To Share as 102777-MMKT-3",
           "frame": {
             "kind": "top",
             "value": null
@@ -635,14 +647,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'102777-MMKT-4' is present after select_to_share_102777.",
+        "description": "'FUNDS TRANSFER' is present after select_to_share_as.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "102777-MMKT-4",
+          "text": "FUNDS TRANSFER",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -692,7 +704,19 @@
         "clear_first": true
       },
       "risk": "safe",
-      "checkpoint": null,
+      "checkpoint": {
+        "description": "'FUNDS TRANSFER' is present after enter_transfer_amount.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "FUNDS TRANSFER",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
       "timeout_ms": 10000,
       "signals": []
     },
@@ -738,7 +762,19 @@
         "clear_first": true
       },
       "risk": "safe",
-      "checkpoint": null,
+      "checkpoint": {
+        "description": "'FUNDS TRANSFER' is present after enter_memo.",
+        "assertion": {
+          "kind": "text_present",
+          "frame": {
+            "kind": "top",
+            "value": null
+          },
+          "text": "FUNDS TRANSFER",
+          "case_sensitive": false
+        },
+        "timeout_ms": 8000
+      },
       "timeout_ms": 10000,
       "signals": []
     },
@@ -788,12 +824,12 @@
       "signals": []
     },
     {
-      "id": "post_the_funds_transfer",
-      "intent": "Post the funds transfer",
+      "id": "post_the_transfer",
+      "intent": "Post the transfer",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Post the funds transfer",
+          "described_as": "Post the transfer",
           "frame": {
             "kind": "top",
             "value": null
@@ -817,14 +853,14 @@
       },
       "risk": "irreversible",
       "checkpoint": {
-        "description": "'Confirmation' is present after post_the_funds_transfer.",
+        "description": "'CONFIRMATION' is present after post_the_transfer.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Confirmation",
+          "text": "CONFIRMATION",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -1049,10 +1085,10 @@
   },
   "approval": "draft",
   "provenance": {
-    "discovered_at": "2026-09-03T20:32:49.138326Z",
+    "discovered_at": "2026-09-05T04:42:11.239345Z",
     "model": "claude-sonnet-5",
-    "discovery_run_id": "f5eaa750ef5f",
-    "transcript_digest": "a1bae80726ea9ce6f087992e5bbff78dea486e0cf46bd23645910e4b31653c0a",
+    "discovery_run_id": "19c2144ada5c",
+    "transcript_digest": "7a88b6df82bf49b34c9fa6501431a818ddeda2e53be0c5b0ea1a1cf29d0cd09b",
     "recorded_by": "llm_discovery"
   },
   "tags": []

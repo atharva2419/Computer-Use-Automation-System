@@ -139,6 +139,62 @@ def circular_anchor(anchor: str, observed: str) -> bool:
     return anchor in observed or observed in anchor
 
 
+# Shapes that read like data belonging to one record rather than like screen
+# furniture. Heuristics, deliberately: they inform a reviewer, they never
+# reject. See suspect_checkpoints.
+_RECORD_DATA_SHAPES: list[tuple[str, re.Pattern[str]]] = [
+    ("looks like a person's name", re.compile(r"^[A-Z][a-z]+, [A-Z][a-z]+")),
+    ("looks like an account or reference number", re.compile(r"^[A-Z0-9]+-[A-Z0-9-]+$")),
+    ("looks like an email address", re.compile(r"[^@\s]+@[^@\s]+\.[a-z]{2,}")),
+]
+
+
+def suspect_checkpoints(capability: Capability) -> list[tuple[str, str, str]]:
+    """Checkpoints that may be pinned to the record this was recorded against.
+
+    A separate, weaker thing from the rules that discard a checkpoint outright.
+    Those catch what the recorder can *know* is invocation-specific: a value it
+    was given as an argument, or one it read back as an output. This catches
+    what it can only suspect.
+
+    The gap is real and worth naming. In a flow that never reads the member's
+    name -- a transfer, say -- the name is neither an argument nor an output,
+    so nothing in the recording proves it is record data rather than a screen
+    heading. The model is told not to use one and sometimes does anyway.
+
+    So the residue is reported rather than guessed at. Every capability that
+    can reach this state is irreversible, and an irreversible capability is
+    never auto-verified: a person has to approve it. This is what that person
+    should read first.
+
+    Returns (step_id, text, why) for each suspicion.
+    """
+    found: list[tuple[str, str, str]] = []
+    examples = {
+        spec.example.strip()
+        for spec in capability.inputs
+        if spec.example and not spec.secret
+    }
+
+    checkpoints = [(s.id, s.checkpoint) for s in capability.steps]
+    checkpoints.append(("<success>", capability.success))
+    for step_id, checkpoint in checkpoints:
+        if checkpoint is None:
+            continue
+        text = getattr(checkpoint.assertion, "text", "")
+        if not text:
+            continue
+        quoted = next((e for e in examples if len(e) >= 4 and e in text), None)
+        if quoted:
+            found.append((step_id, text, f"contains the recorded value {quoted!r}"))
+            continue
+        for why, pattern in _RECORD_DATA_SHAPES:
+            if pattern.search(text.strip()):
+                found.append((step_id, text, why))
+                break
+    return found
+
+
 class RecorderError(RuntimeError):
     """The trajectory cannot be turned into a valid capability."""
 

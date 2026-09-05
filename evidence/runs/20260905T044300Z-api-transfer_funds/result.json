@@ -1,0 +1,233 @@
+{
+  "run_id": "61eace92532e",
+  "capability_id": "meridian_hosted.member.transfer_funds",
+  "capability_version": 1,
+  "started_at": "2026-09-05T04:43:01.807148Z",
+  "finished_at": "2026-09-05T04:43:10.975633Z",
+  "duration_ms": 9168,
+  "steps": [
+    {
+      "step_id": "go_to_sign_on",
+      "index": 0,
+      "intent": "Go to sign-on page for MERIDIAN CORE console",
+      "action_kind": "navigate",
+      "status": "ok",
+      "resolved_by": null,
+      "strategy_rank": null,
+      "duration_ms": 781,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_id",
+      "index": 1,
+      "intent": "Enter operator ID",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 139,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_operator_password",
+      "index": 2,
+      "intent": "Enter operator password",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 156,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "submit_sign_on_form",
+      "index": 3,
+      "intent": "Submit sign on form",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 781,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "go_to_member_inquiry",
+      "index": 4,
+      "intent": "Go to Member Inquiry / Selection",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 718,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "type_member_number_to",
+      "index": 5,
+      "intent": "Type member number to search",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 140,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "search_for_member",
+      "index": 6,
+      "intent": "Search for member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 719,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_member_record",
+      "index": 7,
+      "intent": "Open member record",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 702,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "open_funds_transfer_for",
+      "index": 8,
+      "intent": "Open Funds Transfer for this member",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 719,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_from_share_as_2",
+      "index": 9,
+      "intent": "Select From Share as 102777-MMKT-4",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 140,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "select_to_share_as",
+      "index": 10,
+      "intent": "Select To Share as 102777-MMKT-3",
+      "action_kind": "select",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 125,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_transfer_amount",
+      "index": 11,
+      "intent": "Enter transfer amount",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 125,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "enter_memo",
+      "index": 12,
+      "intent": "Enter memo",
+      "action_kind": "fill",
+      "status": "ok",
+      "resolved_by": "label_cell",
+      "strategy_rank": 0,
+      "duration_ms": 125,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "continue_to_confirmation_screen",
+      "index": 13,
+      "intent": "Continue to confirmation screen",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 734,
+      "checkpoint_ok": true,
+      "note": ""
+    },
+    {
+      "step_id": "post_the_transfer",
+      "index": 14,
+      "intent": "Post the transfer",
+      "action_kind": "click",
+      "status": "ok",
+      "resolved_by": "role_name",
+      "strategy_rank": 0,
+      "duration_ms": 2983,
+      "checkpoint_ok": true,
+      "note": ""
+    }
+  ],
+  "recoveries": [],
+  "escalations": [
+    {
+      "request_id": "7265c72a06",
+      "step_id": "post_the_transfer",
+      "reason": "irreversible action on 'Post Transfer' requires operator approval",
+      "opened_at": "2026-09-05T04:43:07.922133Z",
+      "resolved_at": "2026-09-05T04:43:10.171683Z",
+      "resolution": "resumed",
+      "operator": "dashboard",
+      "human_actions": []
+    }
+  ],
+  "control_ledger": [
+    {
+      "at": "2026-09-05T04:43:01.807148Z",
+      "from_actor": "none",
+      "to_actor": "agent",
+      "reason": "replay meridian_hosted.member.transfer_funds"
+    },
+    {
+      "at": "2026-09-05T04:43:07.954202Z",
+      "from_actor": "agent",
+      "to_actor": "human",
+      "reason": "irreversible action on 'Post Transfer' requires operator approval"
+    },
+    {
+      "at": "2026-09-05T04:43:10.170685Z",
+      "from_actor": "human",
+      "to_actor": "agent",
+      "reason": "operator handed control back"
+    }
+  ],
+  "human_touched": true,
+  "evidence_dir": null,
+  "status": "success",
+  "outputs": {
+    "confirmation_reference": "[REDACTED:restricted str]"
+  },
+  "outputs_written": false,
+  "output_names": [
+    "confirmation_reference"
+  ]
+}

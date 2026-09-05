@@ -36,7 +36,12 @@ EXPECT_TEXT_DESCRIPTION = (
     "that changes between runs -- a balance, an amount, a date, a reference "
     "number, a member's name. Those are outputs to read, not evidence that a "
     "step worked, and a checkpoint containing one is wrong the moment the "
-    "data moves."
+    "data moves.\n"
+    "One test before you answer: would this text still be on the screen if "
+    "the record belonged to somebody else entirely, or if every field on it "
+    "were blank? If not, it is data about this record and you must pick "
+    "something else. 'MEMBER RECORD' passes. 'Johnson, Katherine' does not, "
+    "even though you can see it right now."
 )
 
 TOOLS: list[dict[str, Any]] = [
