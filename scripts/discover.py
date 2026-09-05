@@ -247,6 +247,12 @@ def main() -> int:
     )
     sink.note(
         "discovery_finished",
+        # The same id the emitted artifact carries as provenance.discovery_run_id.
+        # Without it here, nothing ties an artifact back to the run that produced
+        # it: the evidence records what happened and the artifact records that it
+        # came from *some* run, and matching the two means guessing from
+        # timestamps. That guess is exactly what a reviewer should not have to do.
+        run_id=result.run_id,
         status=result.status,
         steps=result.steps_taken,
         model_turns=result.model_turns,

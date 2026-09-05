@@ -13,6 +13,7 @@ import pathlib
 import pytest
 
 from cua.guardrails import (
+    GateDecision,
     GateRequest,
     Policy,
     PolicyGate,
