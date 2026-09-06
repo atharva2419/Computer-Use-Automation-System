@@ -70,6 +70,16 @@ class Run:
     recoveries: list[dict[str, Any]] = field(default_factory=list)
     evidence_dir: str | None = None
 
+    # Where this record came from and what kind of run it was. A run read back
+    # from the evidence directory is presented in exactly this shape, so the
+    # API and the templates need no idea which they are looking at -- but a
+    # reviewer does, and so does the runner when deciding what it may resume.
+    source: str = "live"
+    kind: str = "replay"
+    # Discovery only: what the recorder refused to write down, and why.
+    notes: list[str] = field(default_factory=list)
+    model_turns: int | None = None
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "run_id": self.run_id,
@@ -87,6 +97,10 @@ class Run:
             "intervention": self.intervention,
             "recoveries": self.recoveries,
             "evidence_dir": self.evidence_dir,
+            "source": self.source,
+            "kind": self.kind,
+            "notes": self.notes,
+            "model_turns": self.model_turns,
         }
 
 

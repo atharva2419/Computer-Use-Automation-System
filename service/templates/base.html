@@ -79,6 +79,9 @@
   const BADGE = {
     success:"b-ok", failed:"b-bad", business_outcome:"b-info",
     awaiting_operator:"b-warn", running:"b-warn", queued:"b-dim", rejected:"b-bad",
+    // discovery outcomes -- a recorded run produced an artifact; exhausted
+    // and stuck mean the budget or the model gave out first.
+    recorded:"b-ok", exhausted:"b-warn", stuck:"b-warn",
   };
   function badge(s) {
     return '<span class="badge ' + (BADGE[s] || "b-dim") + '">' + s + "</span>";

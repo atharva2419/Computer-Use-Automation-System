@@ -123,13 +123,18 @@ observation).
 Redaction is unchanged and applies to everything written down. Evidence is written for every run,
 not only failures, and served at `/runs/{id}/evidence/{file}`.
 
+The dashboard's run history reads that directory as well as the live runner, so it covers
+**discovery and replay** and survives a restart. A discovery run shows the model's own actions as
+its steps, and — more usefully — what the recorder *refused* to write down: the checkpoint that
+quoted its own answer, the locator anchored on the value it reads. That reasoning used to exist
+only in a terminal that scrolled away.
+
 ## 5. What I cut, and what I would build next
 
 **Cut deliberately.** No separate find-by-number capability — the function is covered by
 `find_by_name` and number lookup runs inside five others; a near-duplicate is breadth, not depth.
-The chatbot is single-turn: one model call, one capability, no chaining. Run history is in memory,
-because the durable record is the evidence directory. No general retry/backoff — the maintenance
-interstitial is handled, transient-fault retry is not.
+The chatbot is single-turn: one model call, one capability, no chaining. No general
+retry/backoff — the maintenance interstitial is handled, transient-fault retry is not.
 
 **Next, in order.** (1) Close the pinned-checkpoint gap structurally: record each capability twice
 with different arguments and keep only assertions true in both, turning a heuristic into a

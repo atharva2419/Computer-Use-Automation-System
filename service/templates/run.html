@@ -63,6 +63,15 @@
   </div>
 </div>
 
+<div id="notes-wrap" class="panel pad" style="display:none; margin-top:16px; border-color:var(--warn)">
+  <h2 style="margin-top:0">What the recorder refused to write down</h2>
+  <p class="dim" style="margin:0 0 11px; font-size:12px">
+    A checkpoint or locator the model proposed that would have pinned the capability
+    to the record it was recorded against. Discarded, with the reason, at record time.
+  </p>
+  <ul id="notes" class="mono" style="margin:0; padding-left:19px; font-size:13px"></ul>
+</div>
+
 <h2>Steps</h2>
 <div class="panel">
   <table>
@@ -80,7 +89,11 @@
 {% block scripts %}
 <script>
 const RUN_ID = {{ run_id | tojson }};
-const TERMINAL = ["success", "failed", "business_outcome", "rejected"];
+// Replay outcomes, plus the discovery ones an archived recording carries.
+// Missing these means an archived discovery run polls forever and never
+// loads its evidence.
+const TERMINAL = ["success", "failed", "business_outcome", "rejected",
+                  "recorded", "exhausted", "stuck", "unknown"];
 const DASH = "&mdash;";
 let timer = null;
 
@@ -183,6 +196,12 @@ async function poll() {
 
   renderSteps(run.steps || []);
   renderEscalation(run);
+
+  if ((run.notes || []).length) {
+    document.getElementById("notes-wrap").style.display = "block";
+    document.getElementById("notes").innerHTML =
+      run.notes.map(n => "<li>" + esc(n) + "</li>").join("");
+  }
 
   if (TERMINAL.includes(run.status)) {
     clearInterval(timer);

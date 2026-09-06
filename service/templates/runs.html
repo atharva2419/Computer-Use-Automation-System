@@ -3,18 +3,31 @@
 {% block content %}
 
 <h2>Run history</h2>
+
+{# Discovery and replay together, which is what brief 3.4 asks for. The list is
+   read from the evidence directory as well as this process's own runs, so it
+   survives a restart and shows recordings the service never executed itself. #}
+<div style="display:flex; gap:8px; margin-bottom:13px; align-items:baseline; flex-wrap:wrap">
+  <a href="/ui/runs" class="badge b-info" style="text-decoration:none">all</a>
+  <a href="/ui/runs?kind=discovery" class="badge b-dim" style="text-decoration:none">discovery</a>
+  <a href="/ui/runs?kind=replay" class="badge b-dim" style="text-decoration:none">replay</a>
+  <span class="dim" style="font-size:12px; margin-left:6px">
+    live runs and everything in <span class="mono">evidence/runs/</span>
+  </span>
+</div>
 <div class="panel">
   <table id="runs">
     <thead><tr>
-      <th>Run</th><th>Capability</th><th>Status</th>
+      <th>Run</th><th style="width:76px">Kind</th><th>Capability</th><th>Status</th>
       <th style="width:60px">Steps</th><th>Outcome</th><th>Started</th>
     </tr></thead>
-    <tbody><tr><td colspan="6" class="dim" style="padding:14px">Loading&hellip;</td></tr></tbody>
+    <tbody><tr><td colspan="7" class="dim" style="padding:14px">Loading&hellip;</td></tr></tbody>
   </table>
 </div>
 <p class="dim" style="margin-top:12px; font-size:12px">
-  Held in memory for the life of the service. The durable record of every run
-  is the evidence directory it wrote, linked from each run's page.
+  Read from <span class="mono">evidence/runs/</span> as well as this process's own
+  runs, so the history survives a restart and includes discovery recordings the
+  service never executed itself. Each run links to the evidence it wrote.
 </p>
 
 {% endblock %}
@@ -24,15 +37,21 @@
 async function loadRuns() {
   const body = document.querySelector("#runs tbody");
   let runs;
-  try { runs = (await (await fetch("/runs?limit=100")).json()).runs; }
+  const kind = new URLSearchParams(location.search).get("kind");
+  try {
+    runs = (await (await fetch("/runs?limit=200" + (kind ? "&kind=" + kind : ""))).json()).runs;
+  }
   catch (e) { return; }
   if (!runs.length) {
-    body.innerHTML = '<tr><td colspan="6" class="dim" style="padding:14px">'
+    body.innerHTML = '<tr><td colspan="7" class="dim" style="padding:14px">'
       + 'No runs yet. <a href="/ui">Invoke a capability</a> to start one.</td></tr>';
     return;
   }
   body.innerHTML = runs.map(r => "<tr>"
     + '<td><a class="mono" href="/ui/runs/' + r.run_id + '">' + r.run_id + "</a></td>"
+    + '<td>' + (r.kind === "discovery"
+        ? '<span class="badge b-info">discovery</span>'
+        : '<span class="badge b-dim">replay</span>') + "</td>"
     + '<td class="mono">' + esc(r.capability_id) + "</td>"
     + "<td>" + badge(r.status) + "</td>"
     + '<td class="mono">' + r.steps.length + "</td>"

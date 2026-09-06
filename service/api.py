@@ -32,6 +32,7 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
+from .archive import RunArchive
 from .catalog import (
     CapabilityCatalog,
     CapabilityNotApproved,
@@ -101,6 +102,9 @@ def create_app(
     # a planner asked to choose between "read a balance here" and "read a
     # balance there" is being asked a question the user did not pose.
     planner, planner_name = build_planner(catalog)
+    # Runs that finished before this process started -- including every
+    # discovery run, which the service never executes itself.
+    archive = RunArchive()
     runner = CapabilityRunner(
         catalog=catalog,
         policy_path=policy,
@@ -179,13 +183,32 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from None
         return {"run_id": run.run_id, "status": run.status, "poll": f"/runs/{run.run_id}"}
 
+    def _resolve_run(run_id: str) -> Any:
+        """A run by id, live first, then the evidence directory."""
+        return runner.get(run_id) or archive.load(run_id)
+
     @app.get("/runs", tags=["runs"])
-    def list_runs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str, Any]:
-        return {"runs": [r.as_dict() for r in runner.recent(limit)]}
+    def list_runs(
+        limit: int = Query(default=50, ge=1, le=200),
+        kind: str | None = Query(default=None, description="discovery | replay"),
+    ) -> dict[str, Any]:
+        """Every run this service knows about, newest first.
+
+        Live runs and the evidence directory, merged. A run that is still
+        executing exists in both once its directory is created, so the live
+        record wins -- it is the one that is still changing.
+        """
+        live = runner.recent(limit)
+        seen = {r.evidence_dir for r in live if r.evidence_dir}
+        merged = live + [r for r in archive.recent() if r.evidence_dir not in seen]
+        if kind:
+            merged = [r for r in merged if r.kind == kind]
+        merged.sort(key=lambda r: r.started_at or r.submitted_at or "", reverse=True)
+        return {"runs": [r.as_dict() for r in merged[:limit]]}
 
     @app.get("/runs/{run_id}", tags=["runs"])
     def get_run(run_id: str) -> dict[str, Any]:
-        run = runner.get(run_id)
+        run = _resolve_run(run_id)
         if run is None:
             raise HTTPException(status_code=404, detail=f"no run {run_id!r}")
         return run.as_dict()
@@ -219,7 +242,7 @@ def create_app(
         observation dump, and offering links to files that were never written
         would misrepresent what the evidence covers.
         """
-        run = runner.get(run_id)
+        run = _resolve_run(run_id)
         if run is None:
             raise HTTPException(status_code=404, detail=f"no run {run_id!r}")
         directory = Path(run.evidence_dir) if run.evidence_dir else None
@@ -242,7 +265,7 @@ def create_app(
         Path traversal is refused rather than sanitised: the only legitimate
         request is for a plain filename inside that run's own folder.
         """
-        run = runner.get(run_id)
+        run = _resolve_run(run_id)
         if run is None or not run.evidence_dir:
             raise HTTPException(status_code=404, detail="no evidence for that run")
         if "/" in filename or "\\" in filename or filename.startswith("."):
@@ -314,7 +337,7 @@ def create_app(
         is called here, so nothing in the sentence can be invented -- every
         figure came out of the replay's typed outputs.
         """
-        run = runner.get(run_id)
+        run = _resolve_run(run_id)
         if run is None:
             raise HTTPException(status_code=404, detail=f"no run {run_id!r}")
         entry = catalog.entry(run.capability_id) if run.capability_id in catalog else None

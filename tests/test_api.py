@@ -358,3 +358,56 @@ def test_root_redirects_to_the_dashboard(client: TestClient):
 def test_run_detail_renders_before_the_run_exists(client: TestClient):
     """The page polls for its own state, so it works for a queued run."""
     assert client.get("/ui/runs/does-not-exist-yet").status_code == 200
+
+
+# --- run history covers discovery and replay (brief 3.4) ---------------------
+
+
+def test_run_history_includes_discovery_and_survives_a_restart(client):
+    """3.4 asks for run history covering discovery *and* replay.
+
+    The runner only knows what it executed itself, so before this the dashboard
+    showed neither discovery recordings nor anything from a previous process --
+    it opened empty. The evidence directory is the durable record; the API reads
+    it back into the same shape.
+    """
+    runs = client.get("/runs?limit=200").json()["runs"]
+    kinds = {r["kind"] for r in runs}
+    assert "discovery" in kinds, "no discovery runs in the history"
+    assert "replay" in kinds
+
+    archived = [r for r in runs if r["source"] == "archive"]
+    assert archived, "nothing read back from evidence/runs"
+    # This client's runner has executed nothing, so every run here is archived.
+    assert all(r["evidence_dir"] for r in archived)
+
+
+def test_run_history_can_be_filtered_by_kind(client):
+    only = client.get("/runs?kind=discovery&limit=200").json()["runs"]
+    assert only and all(r["kind"] == "discovery" for r in only)
+
+
+def test_an_archived_discovery_run_opens_by_id(client):
+    runs = client.get("/runs?kind=discovery&limit=200").json()["runs"]
+    run_id = runs[0]["run_id"]
+    body = client.get(f"/runs/{run_id}").json()
+    assert body["kind"] == "discovery"
+    assert body["steps"], "a discovery run should show the model's actions as steps"
+    assert client.get(f"/runs/{run_id}/evidence").json()["files"]
+
+
+def test_a_discovery_run_surfaces_what_the_recorder_refused(client):
+    """The reason a capability is trustworthy, made readable.
+
+    These notes used to go to a terminal that scrolled away.
+    """
+    runs = client.get("/runs?kind=discovery&limit=200").json()["runs"]
+    with_notes = [r for r in runs if r["notes"]]
+    assert with_notes, "no discovery run carries recorder notes"
+    joined = " ".join(n for r in with_notes for n in r["notes"])
+    assert "discarded" in joined or "refused" in joined
+
+
+def test_archived_run_ids_cannot_escape_the_evidence_root(client):
+    for bad in ("../../etc", "..%2f..", ".hidden"):
+        assert client.get(f"/runs/{bad}").status_code == 404
