@@ -45,9 +45,20 @@ def main() -> int:
         policy=args.policy,
         headed=not args.headless,
     )
+    base = f"http://{args.host}:{args.port}"
     print(f"  catalog  {len(app.state.catalog)} capabilities from {args.artifacts}")
     print(f"  policy   {args.policy}")
-    print(f"  docs     http://{args.host}:{args.port}/docs")
+    print(f"  browser  {'headless' if args.headless else 'visible'}")
+    print()
+    print(f"  {base}/ui        capabilities, and a form to invoke each")
+    print(f"  {base}/ui/chat   chatbot")
+    print(f"  {base}/ui/runs   run history -- discovery and replay")
+    print(f"  {base}/docs      OpenAPI")
+    print()
+    # uvicorn runs at log_level="warning" and prints nothing when it binds,
+    # which reads exactly like a hang -- the first thing anyone does with this
+    # is wonder whether it started. Say so, rather than leaving a bare cursor.
+    print("  serving. Leave this running; Ctrl+C to stop.", flush=True)
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
     return 0
 

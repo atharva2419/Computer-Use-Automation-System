@@ -411,3 +411,52 @@ def test_a_discovery_run_surfaces_what_the_recorder_refused(client):
 def test_archived_run_ids_cannot_escape_the_evidence_root(client):
     for bad in ("../../etc", "..%2f..", ".hidden"):
         assert client.get(f"/runs/{bad}").status_code == 404
+
+
+# --- an operator who closes the browser (brief 3.5) --------------------------
+
+
+def test_a_closed_browser_during_a_handoff_is_named_not_a_stack_trace():
+    """The escalation hands a person a real browser. Some of them will shut it.
+
+    That used to surface as `internal_error` carrying a raw Playwright repr --
+    the one place this system stopped naming what it expected and what it saw,
+    on the path most likely to be demonstrated live.
+    """
+    from service.runner import _describe_worker_failure
+
+    class TargetClosedError(Exception):
+        pass
+
+    detail = _describe_worker_failure(
+        TargetClosedError("Page.wait_for_timeout: Target page, context or browser has been closed")
+    )
+    assert detail["category"] == "session_closed"
+    assert "browser was closed" in detail["observed"]
+    # And it tells the operator the one thing they need to check.
+    assert "may already have applied it" in detail["observed"]
+
+
+def test_an_ordinary_crash_is_still_reported_as_one():
+    """The narrowing must not swallow unrelated failures."""
+    from service.runner import _describe_worker_failure
+
+    detail = _describe_worker_failure(ValueError("something else entirely"))
+    assert detail["category"] == "internal_error"
+    assert "ValueError" in detail["observed"]
+
+
+def test_an_escalation_that_resumed_into_a_crash_does_not_claim_success():
+    """Evidence must not read as a clean handoff for a run that never finished."""
+    from service.runner import Run, _describe_worker_failure
+
+    run = Run(run_id="r", capability_id="c")
+    run.intervention = {"resolution": "resumed", "step_id": "post_the_transfer"}
+
+    # what the worker does when the resume then dies
+    run.status = "failed"
+    run.error = _describe_worker_failure(RuntimeError("TargetClosedError: browser closed"))
+    if run.intervention.get("resolution") == "resumed":
+        run.intervention["resolution"] = "resumed_then_failed"
+
+    assert run.intervention["resolution"] == "resumed_then_failed"

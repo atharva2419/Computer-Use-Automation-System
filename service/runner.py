@@ -137,6 +137,41 @@ class _RunSink:
         return self.files.directory
 
 
+# Playwright raises this when the page, context or browser is gone. It is not
+# an internal fault: it is what happens when the operator closes the window
+# during a handoff, which is a thing operators do -- the escalation hands them
+# a real browser and some of them will shut it.
+_CLOSED_SESSION = ("targetclosederror", "target page, context or browser has been closed")
+
+
+def _describe_worker_failure(exc: Exception) -> dict[str, Any]:
+    """Turn an escaped exception into something a person can act on.
+
+    Everywhere else this system names the step, the expectation and the
+    observation. A bare ``internal_error`` carrying a Playwright repr is the
+    one place it stopped doing that, and it surfaced on the path most likely
+    to be demonstrated: a run paused for a human whose browser then vanished.
+    """
+    blob = f"{type(exc).__name__}: {exc}".lower()
+    if any(marker in blob for marker in _CLOSED_SESSION):
+        return {
+            "category": "session_closed",
+            "expected": "the browser to still be open when the run resumed",
+            "observed": (
+                "The browser was closed while the run was paused for an "
+                "operator, so it could not continue. Nothing further was "
+                "attempted. If the operator completed the step by hand, the "
+                "host may already have applied it -- check the member record "
+                "before re-running."
+            ),
+        }
+    return {
+        "category": "internal_error",
+        "expected": "the invocation to complete",
+        "observed": f"{type(exc).__name__}: {exc}",
+    }
+
+
 class CapabilityRunner:
     """Queues invocations and executes them one at a time."""
 
@@ -218,12 +253,15 @@ class CapabilityRunner:
                 run = self._runs.get(run_id)
                 if run is not None:
                     run.status = "failed"
-                    run.error = {
-                        "category": "internal_error",
-                        "expected": "the invocation to complete",
-                        "observed": f"{type(exc).__name__}: {exc}",
-                    }
+                    run.error = _describe_worker_failure(exc)
                     run.finished_at = _now()
+                    # An escalation that was answered "resume" but whose resume
+                    # then died did not resolve. Saying it did is worse than
+                    # saying nothing: the evidence would read as a successful
+                    # handoff for a run that never finished.
+                    if run.intervention and run.intervention.get("resolution") == "resumed":
+                        run.intervention["resolution"] = "resumed_then_failed"
+                        run.intervention["note"] = run.error["observed"]
             finally:
                 self._queue.task_done()
 

@@ -1,0 +1,29 @@
+SURFACE URL: https://web-sample.interface-hiring.com/members/102777/transfer/review
+
+--- FRAME name='(top)' url=https://web-sample.interface-hiring.com/members/102777/transfer/review title='Application Error - Meridian Core' ---
+- table:
+  - rowgroup:
+    - row "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™":
+      - cell "MERIDIAN CORE Member Services Platform v4.2.1 Cornerstone Financial Systems™"
+    - row "Main Menu · Member Inquiry · System Settings · Sign Off":
+      - cell "Main Menu · Member Inquiry · System Settings · Sign Off":
+        - link "Main Menu":
+          - /url: /menu
+        - text: ·
+        - link "Member Inquiry":
+          - /url: /members
+        - text: ·
+        - link "System Settings":
+          - /url: /settings
+        - text: ·
+        - link "Sign Off":
+          - /url: /signoff
+    - 'row "APPLICATION ERROR An unexpected error occurred while processing your request. Reference: ERR-64133F50 Please contact the Help Desk if the problem persists. Return to previous screen"':
+      - 'cell "APPLICATION ERROR An unexpected error occurred while processing your request. Reference: ERR-64133F50 Please contact the Help Desk if the problem persists. Return to previous screen"':
+        - text: "APPLICATION ERROR An unexpected error occurred while processing your request. Reference: ERR-64133F50 Please contact the Help Desk if the problem persists."
+        - link "Return to previous screen":
+          - /url: https://web-sample.interface-hiring.com/members/102777/transfer
+    - row "OPR TELLER1 | BR MAIN-001 | 09/07/2026 21:08:21 | SID C35913C5":
+      - cell "OPR TELLER1 | BR MAIN-001 | 09/07/2026 21:08:21 | SID C35913C5"
+    - row "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel":
+      - cell "F3=Sign Off F5=Main Menu F7=Member Inquiry F12=Cancel"
