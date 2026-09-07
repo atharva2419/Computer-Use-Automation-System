@@ -1,3 +1,9 @@
+# The project itself, editable, so `cua` is importable from any entry
+# point. Without this a fresh clone can run the tests and the service
+# (both put src/ on the path themselves) but not discover.py or
+# replay.py, which are the two the demo path uses.
+-e .
+
 flask==3.0.3
 playwright==1.55.0
 pydantic==2.9.2

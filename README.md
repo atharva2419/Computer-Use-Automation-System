@@ -31,13 +31,17 @@ injectable runtime faults. All data is synthetic.
 
 Requires Python 3.11+ and about 2 minutes.
 
-```bash
+```powershell
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
-# source .venv/bin/activate && pip install -r requirements.txt  # macOS/Linux
+.\.venv\Scripts\Activate.ps1          # Windows PowerShell
+# source .venv/bin/activate           # macOS/Linux
 
-.venv/Scripts/python.exe -m playwright install chromium
+pip install -r requirements.txt       # includes `-e .`, so `cua` is importable
+python -m playwright install chromium
 ```
+
+Activate the venv in every new terminal. Without it you get
+`ModuleNotFoundError: No module named 'cua'`.
 
 **Config.** Only the discovery run needs a key. Copy the template and add one:
 
@@ -55,7 +59,7 @@ TARGET_BASE_URL=http://127.0.0.1:5057
 
 **Everything except discovery runs with no API key and no external services** —
 the target app is local, and replay, guardrails, the human handoff, evidence
-and all 185 tests never load a model library. There is a test that asserts
+and all 197 tests never load a model library. There is a test that asserts
 exactly that: it removes `anthropic` from `sys.modules`, replays a capability,
 and checks it never comes back.
 
@@ -170,7 +174,7 @@ attached. Add `--operator` to approve it and let the flow finish.
 
 ```bash
 .venv/Scripts/python.exe scripts/demo_surface.py     # watch the locator layer, narrated
-.venv/Scripts/python.exe -m pytest -q                # 185 tests, ~4 min, real browser
+.venv/Scripts/python.exe -m pytest -q                # 197 tests, ~4 min, real browser
 .venv/Scripts/python.exe -m pyright --pythonpath .venv/Scripts/python.exe \n    src/cua service tests scripts
 ```
 
