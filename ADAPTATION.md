@@ -11,20 +11,21 @@ denied, risk rules, redaction) and `config/signals/meridian-hosted.yaml` (ten ru
 and how each is detected). Selected with `--policy`. The take-home's policy still drives the local
 target unchanged, and both products load side by side in one catalog.
 
-**Core churn: 6 of 24 files in `src/cua/`, `+439 / -16` lines** — almost purely additive. `src/cua/`
+**Core churn: 7 of 24 files in `src/cua/`, `+508 / -17` lines** — almost purely additive. `src/cua/`
 names no target. One file of 41 imports Playwright (`surface/web.py`), so every browser concept
 stays behind the `Surface` seam.
 
-"A config change" would be too tidy an answer, though. **None of the six core changes were porting
-work** — each was a latent defect the take-home target could not expose:
+"A config change" would be too tidy an answer, though. **None of the seven core changes were
+porting work** — each was a latent defect the take-home target could not expose:
 
 | Core change | What the live target exposed |
 |---|---|
 | `recorder.py` (+244) — checkpoint and locator discipline | Static demo data hid this. Here balances move while you watch, so a model quoting `"$5.00"` or `"Johnson, Katherine"` records a capability that passes its own recording and works for exactly one member. |
-| `loop.py` (+92) — value stabilisation; refusals fed back to the model; recorder notes into evidence | A dropdown label contains a live balance, so the recorded literal rots. And an emission refusal used to kill a paid run the model could have fixed. |
+| `loop.py` (+129) — value stabilisation; refusals fed back to the model; a navigation may not bake in an argument | A dropdown label contains a live balance, so the recorded literal rots. And an emission refusal used to kill a paid run the model could have fixed. |
 | `tools.py` (+21) — checkpoint guidance | Prompt-level mitigation for the same class. It failed three times, which is why the rules below are structural. |
 | `guardrails.py` (+28) — a deny rule must not trap | Always broken; only surfaced when discovery wandered onto a denied route and could not leave. |
 | `schema/capability.py` (+11) — outcome codes need not be unique | This host reports one condition on two different screens. |
+| `evidence.py` (+32) — free text redacted at the point of writing | A step's `intent` is written by the model and copied into every replay; `"Select From Share as 102777-MMKT-4"` was reaching evidence unredacted while the outputs beside it were scrubbed. |
 | `agent/client.py` (new) — workspace header | Environment, not target: an org-scoped API key must name its workspace. |
 
 A live, shared, mutable target breaks assumptions a fixture cannot. Three capabilities *looked*
@@ -70,7 +71,7 @@ asking a model to restate a result adds a step that can invent a confirmation nu
 Perception is the **accessibility tree**, not the DOM: this console is table-layout HTML with no
 test IDs, and the tree gives roles and labels that survive markup churn. Targets carry ranked
 strategies (`role_name`, `label_cell`, `row_scoped_cell`, `text`, `css`). Across all recorded
-evidence, **248 located steps resolved at rank 0 and none below it** — they transferred with no
+evidence, **220 located steps resolved at rank 0 and none below it** — they transferred with no
 code change, the clearest early signal the seam was in the right place. The per-transaction hidden
 `_token` was a non-issue: it is a session-scoped form field, and the browser submits it because we
 click the real button.
