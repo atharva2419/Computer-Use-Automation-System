@@ -194,7 +194,7 @@ def main() -> int:
     redactor = gate.policy.redactor()
     redactor.learn_secrets(secrets.values())
 
-    sink = FileEvidenceSink(label=args.evidence)
+    sink = FileEvidenceSink(label=args.evidence, redactor=redactor)
 
     recorder = Recorder(
         capability_id=args.capability_id,
@@ -340,7 +340,7 @@ def _verify(capability, bound, policy_path, redactor, path: Path) -> int:
     move from draft to approved.
     """
     print(f"\n{BOLD}verifying by replay{RESET} {DIM}(no model in this path){RESET}")
-    verify_sink = FileEvidenceSink(label="discovery-verify")
+    verify_sink = FileEvidenceSink(label="discovery-verify", redactor=redactor)
     verify_sink.open(capability, run_kind="replay")
 
     surface = PlaywrightWebSurface(headless=True).start()

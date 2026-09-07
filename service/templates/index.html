@@ -52,26 +52,36 @@
 
     <form class="invoke" data-name="{{ c.capability_id }}" data-draft="{{ 0 if c.invocable_unattended else 1 }}">
       {% for field, spec in c.input_schema.properties.items() %}
-        {# Operator credentials are not asked for. The service signs on with
-           the operator in its environment, the way a teller terminal holds one
-           session -- so there is nothing here for anyone to type or mistype. #}
-        {% if field not in c.server_supplied %}
+        {# A credential is never rendered -- there is nothing here for anyone to
+           type or mistype, and nothing for a screen recording to capture. Which
+           *operator* is acting is a different question: it is not a secret, and
+           teller-versus-supervisor is precisely the decision Place Account Hold
+           exists to demonstrate. So it is shown, defaulted from the environment,
+           and editable. #}
+        {% if field not in c.withheld_from_ui %}
           <label for="{{ c.capability_id }}--{{ field }}">
             {{ field }}{% if field in c.input_schema.required %} *{% endif %}
+            {% if field in c.defaults %}
+              <span class="badge b-dim" style="margin-left:6px">from environment</span>
+            {% endif %}
           </label>
           <input id="{{ c.capability_id }}--{{ field }}" name="{{ field }}"
                  {% if field in c.input_schema.required %}data-required="1"{% endif %}
                  type="text"
-                 value="{{ spec.examples[0] if spec.examples else '' }}"
+                 value="{{ c.defaults[field] if field in c.defaults else (spec.examples[0] if spec.examples else '') }}"
                  placeholder="{{ spec.description }}">
         {% endif %}
       {% endfor %}
 
-      {% if c.server_supplied %}
+      {% if c.withheld_from_ui %}
         <p class="dim" style="margin:11px 0 0; font-size:12px">
-          Signed on from the environment as
-          <span class="mono">{{ operator_id or 'CUA_OPERATOR_ID (unset)' }}</span>
-          &mdash; {{ c.server_supplied | join(', ') }} are supplied by the service.
+          <span class="mono">{{ c.withheld_from_ui | join(', ') }}</span>
+          supplied by the service and never shown here.
+          {% if 'operator_id' in c.defaults %}
+            Change <span class="mono">operator_id</span> above to act as a
+            different operator &mdash; try <span class="mono">super1</span> on a
+            supervisor-gated capability.
+          {% endif %}
         </p>
       {% endif %}
 

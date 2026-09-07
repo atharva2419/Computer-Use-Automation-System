@@ -3,7 +3,7 @@
   "id": "meridian_hosted.member.update_information",
   "version": 1,
   "name": "Update member contact information",
-  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. Open Update Member Information. Set the e-mail field to k.johnson@example.com, the phone field to 555-0142 and the mailing address field to '88 Cornerstone Ave, Springfield'. Every one of those three fields must be set explicitly. Save the changes, then read back the e-mail address the host shows as stored.",
+  "description": "Sign on to the MERIDIAN CORE servicing console as operator teller1. Look up member 102777 by member number and open their record. From that record, click through to Update Member Information -- reach it by clicking links on the page, never by typing a member URL. Set the e-mail field to k.johnson@example.com, the phone field to 555-0142 and the mailing address to '88 Cornerstone Ave, Springfield'. Set all three explicitly. Save the changes, then read back the e-mail address the host shows as stored.",
   "app": {
     "product": "meridian-hosted",
     "product_version": "v4.2.1",
@@ -80,7 +80,7 @@
       "description": "",
       "extract": {
         "target": {
-          "described_as": "Read the stored e-mail address from the member record",
+          "described_as": "Read back the stored e-mail address from the member record",
           "frame": {
             "kind": "top",
             "value": null
@@ -109,8 +109,8 @@
   ],
   "steps": [
     {
-      "id": "go_to_the_meridian",
-      "intent": "Go to the MERIDIAN CORE servicing console sign-on page",
+      "id": "go_to_the_sign",
+      "intent": "Go to the sign-on page for the servicing console",
       "action": {
         "kind": "navigate",
         "url": {
@@ -124,14 +124,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Sign On' is present after go_to_the_meridian.",
+        "description": "'MERIDIAN CORE' is present after go_to_the_sign.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Sign On",
+          "text": "MERIDIAN CORE",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -256,12 +256,12 @@
       "signals": []
     },
     {
-      "id": "sign_on_with_entered",
-      "intent": "Sign on with entered credentials",
+      "id": "sign_on_to_the",
+      "intent": "Sign on to the console",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Sign on with entered credentials",
+          "described_as": "Sign on to the console",
           "frame": {
             "kind": "top",
             "value": null
@@ -285,7 +285,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MAIN MENU' is present after sign_on_with_entered.",
+        "description": "'MAIN MENU' is present after sign_on_to_the.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -302,11 +302,11 @@
     },
     {
       "id": "go_to_member_inquiry",
-      "intent": "Go to Member Inquiry / Selection to look up member",
+      "intent": "Go to Member Inquiry to look up member by number",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Go to Member Inquiry / Selection to look up member",
+          "described_as": "Go to Member Inquiry to look up member by number",
           "frame": {
             "kind": "top",
             "value": null
@@ -330,14 +330,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'Member Inquiry' is present after go_to_member_inquiry.",
+        "description": "'MEMBER INQUIRY' is present after go_to_member_inquiry.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "Member Inquiry",
+          "text": "MEMBER INQUIRY",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -388,14 +388,14 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MEMBER INQUIRY / SELECTION' is present after enter_member_number_to.",
+        "description": "'MEMBER INQUIRY' is present after enter_member_number_to.",
         "assertion": {
           "kind": "text_present",
           "frame": {
             "kind": "top",
             "value": null
           },
-          "text": "MEMBER INQUIRY / SELECTION",
+          "text": "MEMBER INQUIRY",
           "case_sensitive": false
         },
         "timeout_ms": 8000
@@ -404,12 +404,12 @@
       "signals": []
     },
     {
-      "id": "search_for_member_102777",
-      "intent": "Search for member 102777",
+      "id": "search_for_the_member",
+      "intent": "Search for the member",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Search for member 102777",
+          "described_as": "Search for the member",
           "frame": {
             "kind": "top",
             "value": null
@@ -432,29 +432,17 @@
         }
       },
       "risk": "safe",
-      "checkpoint": {
-        "description": "'MEMBER' is present after search_for_member_102777.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "MEMBER",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
+      "checkpoint": null,
       "timeout_ms": 10000,
       "signals": []
     },
     {
-      "id": "open_member_102777_s",
-      "intent": "Open member 102777's record",
+      "id": "open_the_member_record",
+      "intent": "Open the member record for 102777",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Open member 102777's record",
+          "described_as": "Open the member record for 102777",
           "frame": {
             "kind": "top",
             "value": null
@@ -478,7 +466,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'MEMBER RECORD' is present after open_member_102777_s.",
+        "description": "'MEMBER RECORD' is present after open_the_member_record.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -494,48 +482,23 @@
       "signals": []
     },
     {
-      "id": "navigate_to_update_member",
-      "intent": "Navigate to Update Member Information for this member",
-      "action": {
-        "kind": "navigate",
-        "url": {
-          "kind": "literal",
-          "value": "https://web-sample.interface-hiring.com/members/102777?next=update"
-        },
-        "frame": {
-          "kind": "top",
-          "value": null
-        }
-      },
-      "risk": "safe",
-      "checkpoint": {
-        "description": "'UPDATE MEMBER INFORMATION' is present after navigate_to_update_member.",
-        "assertion": {
-          "kind": "text_present",
-          "frame": {
-            "kind": "top",
-            "value": null
-          },
-          "text": "UPDATE MEMBER INFORMATION",
-          "case_sensitive": false
-        },
-        "timeout_ms": 8000
-      },
-      "timeout_ms": 10000,
-      "signals": []
-    },
-    {
-      "id": "open_update_member_information",
-      "intent": "Open Update Member Information action for this member",
+      "id": "click_through_to_update",
+      "intent": "Click through to Update Member Information from the member record",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Open Update Member Information action for this member",
+          "described_as": "Click through to Update Member Information from the member record",
           "frame": {
             "kind": "top",
             "value": null
           },
           "strategies": [
+            {
+              "kind": "role_name",
+              "role": "link",
+              "name": "Update Member Information",
+              "exact": true
+            },
             {
               "kind": "text",
               "text": "Update Member Information",
@@ -543,12 +506,12 @@
               "exact": true
             }
           ],
-          "rationale": "Non-semantic control with no interactive role; 'Update Member Information' is the only thing that identifies it, as it is for a human."
+          "rationale": "Control exposes role 'link' with accessible name 'Update Member Information'; that pair tracks what the control means rather than how it is built, so it leads. Visible text is kept as a fallback in case the role changes but the wording does not."
         }
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'UPDATE MEMBER INFORMATION' is present after open_update_member_information.",
+        "description": "'UPDATE MEMBER INFORMATION' is present after click_through_to_update.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -564,12 +527,12 @@
       "signals": []
     },
     {
-      "id": "set_e_mail_field",
-      "intent": "Set e-mail field",
+      "id": "set_email_field_2",
+      "intent": "Set email field",
       "action": {
         "kind": "fill",
         "target": {
-          "described_as": "Set e-mail field",
+          "described_as": "Set email field",
           "frame": {
             "kind": "top",
             "value": null
@@ -606,7 +569,7 @@
       },
       "risk": "safe",
       "checkpoint": {
-        "description": "'UPDATE MEMBER INFORMATION' is present after set_e_mail_field.",
+        "description": "'UPDATE MEMBER INFORMATION' is present after set_email_field_2.",
         "assertion": {
           "kind": "text_present",
           "frame": {
@@ -784,11 +747,11 @@
     },
     {
       "id": "return_to_member_record",
-      "intent": "Return to member record to verify saved e-mail",
+      "intent": "Return to member record to verify saved data",
       "action": {
         "kind": "click",
         "target": {
-          "described_as": "Return to member record to verify saved e-mail",
+          "described_as": "Return to member record to verify saved data",
           "frame": {
             "kind": "top",
             "value": null
@@ -1044,10 +1007,10 @@
   },
   "approval": "approved",
   "provenance": {
-    "discovered_at": "2026-09-05T21:19:23.420039Z",
+    "discovered_at": "2026-09-07T00:15:52.763355Z",
     "model": "claude-sonnet-5",
-    "discovery_run_id": "cd1ccd4827c6",
-    "transcript_digest": "022d73316cb0d002b8062c2f1c2d6d1cbc8c3400d44ba8544ac6aa6773bbcc36",
+    "discovery_run_id": "7b51b43706c2",
+    "transcript_digest": "497ed2c0b24588dd5d0bb482147c4b202815cab9b7a6578a4ee1d38b40eee7f3",
     "recorded_by": "llm_discovery"
   },
   "tags": []

@@ -237,7 +237,11 @@ class CapabilityRunner:
         gate = PolicyGate.from_file(self.policy_path)
         redactor: Redactor = gate.policy.redactor()
 
-        files = FileEvidenceSink(root=self.evidence_root, label=f"api-{capability.id.split('.')[-1]}")
+        files = FileEvidenceSink(
+            root=self.evidence_root,
+            label=f"api-{capability.id.split('.')[-1]}",
+            redactor=redactor,
+        )
         files.open(capability, run_kind="replay")
         run.evidence_dir = str(files.directory)
         sink = _RunSink(run, files)

@@ -285,3 +285,49 @@ def test_the_sink_writes_what_it_is_given(sink: FileEvidenceSink) -> None:
 
     entry = [line for line in _lines(sink) if line["kind"] == "failure"][0]
     assert entry["observed"] == "row [REDACTED:account_number] failed"
+
+
+def test_free_text_is_redacted_on_the_way_to_disk(tmp_path):
+    """"Everything written down is scrubbed" has to include step intents.
+
+    A step's intent is written by the model at record time and copied into
+    every run that replays the artifact. "Select From Share as 102777-MMKT-4"
+    was reaching evidence unredacted while the outputs beside it were scrubbed
+    -- the policy has a pattern for exactly that shape and it was never applied
+    here.
+    """
+    from cua.guardrails import PolicyGate
+
+    redactor = PolicyGate.from_file("config/policy.meridian-hosted.yaml").policy.redactor()
+    capability = Capability.model_validate_json(
+        Path("artifacts/meridian_hosted.member.transfer_funds@v1.json").read_text(encoding="utf-8")
+    )
+    sink = FileEvidenceSink(root=tmp_path, label="t", redactor=redactor)
+    sink.open(capability, run_kind="replay")
+    sink.on_step(
+        "r1",
+        StepRecord(
+            step_id="s",
+            index=0,
+            intent="Select From Share as 102777-MMKT-4",
+            action_kind="select",
+            status="ok",
+        ),
+    )
+
+    assert sink.directory is not None
+    written = (sink.directory / "run.jsonl").read_text(encoding="utf-8")
+    assert "102777-MMKT-4" not in written
+    assert "[REDACTED:share_id]" in written
+
+
+def test_a_sink_without_a_redactor_still_writes(tmp_path):
+    """Redaction is optional plumbing, not a precondition for evidence."""
+    capability = Capability.model_validate_json(
+        Path("artifacts/meridian_hosted.member.transfer_funds@v1.json").read_text(encoding="utf-8")
+    )
+    sink = FileEvidenceSink(root=tmp_path, label="t")
+    sink.open(capability, run_kind="replay")
+    sink.on_step("r1", StepRecord(step_id="s", index=0, intent="x", action_kind="click", status="ok"))
+    assert sink.directory is not None
+    assert (sink.directory / "run.jsonl").read_text(encoding="utf-8")

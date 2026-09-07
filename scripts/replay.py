@@ -25,6 +25,7 @@ from cua.evidence import FileEvidenceSink
 from cua.guardrails import DEFAULT_POLICY_PATH, PolicyGate
 from cua.replay import ReplayEngine
 from cua.schema.capability import Capability
+from cua.schema.common import LiteralValue
 from cua.session import Session
 from cua.surface.web import PlaywrightWebSurface
 
@@ -103,6 +104,29 @@ def render(result: Any) -> None:
     print()
 
 
+
+def _inject_fault(capability: Capability, kind: str) -> None:
+    """Append ``?inject=<kind>`` to the first navigation of a loaded capability.
+
+    The brief exposes each of the target's six runtime faults per-request this
+    way, which makes it the safe way to rehearse one: arming a fault in the
+    System Settings console applies it to everybody, and doing that is what
+    took the shared target down twice during this project.
+
+    In memory only. The artifact on disk keeps its recorded URL, so a drill can
+    never leave a capability that always faults.
+    """
+    for step in capability.steps:
+        url = getattr(step.action, "url", None)
+        value = getattr(url, "value", None)
+        if step.action.kind != "navigate" or not value:
+            continue
+        joiner = "&" if "?" in value else "?"
+        step.action.url = LiteralValue(value=f"{value}{joiner}inject={kind}")
+        return
+    raise SystemExit("this capability has no literal navigation to inject a fault into")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("artifact", type=Path)
@@ -128,6 +152,22 @@ def main() -> int:
              "library change, so this is how a new target is selected.",
     )
     parser.add_argument(
+        "--inject",
+        metavar="KIND",
+        choices=["validation", "notfound", "permission", "timeout", "maintenance", "server"],
+        help=(
+            "Force one of the target's runtime faults for THIS run, by appending "
+            "?inject=<kind> to the capability's first navigation. Per-request, so "
+            "it affects nobody else -- unlike arming a fault globally in the "
+            "System Settings console, which is denied by the allowlist for "
+            "exactly that reason. The artifact on disk is not modified. "
+            "LIMIT on the hosted target: only authenticated routes honour the "
+            "query, and every recorded capability navigates just once, to the "
+            "unauthenticated sign-on page -- so this reaches the faults on a "
+            "capability with a mid-flow navigation, and not otherwise."
+        ),
+    )
+    parser.add_argument(
         "--operator",
         action="store_true",
         help="hand the live session to you when the run gets stuck "
@@ -136,6 +176,9 @@ def main() -> int:
     args = parser.parse_args()
 
     capability = Capability.model_validate_json(args.artifact.read_text("utf-8"))
+    if args.inject:
+        _inject_fault(capability, args.inject)
+        print(f"{YELLOW}fault drill{RESET}  forcing ?inject={args.inject} on the entry navigation")
     supplied = parse_params(args.param)
 
     gate = PolicyGate.from_file(args.policy or DEFAULT_POLICY_PATH)
@@ -143,7 +186,7 @@ def main() -> int:
 
     sink = None
     if args.evidence:
-        sink = FileEvidenceSink(label=args.evidence)
+        sink = FileEvidenceSink(label=args.evidence, redactor=redactor)
         directory = sink.open(capability, run_kind="replay")
         print(f"{DIM}evidence -> {directory}{RESET}")
 

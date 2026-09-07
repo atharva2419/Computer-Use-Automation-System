@@ -40,7 +40,7 @@ from .catalog import (
     CapabilityCatalog,
     CatalogEntry,
     operator_credentials,
-    server_supplied,
+    withheld_from_model,
 )
 
 # Sonnet rather than Opus, matching the discovery agent's default (CUA_MODEL).
@@ -102,7 +102,7 @@ def tool_definitions(entries: list[CatalogEntry]) -> list[dict[str, Any]]:
     """
     tools: list[dict[str, Any]] = []
     for entry in entries:
-        secrets = server_supplied(entry.capability)
+        secrets = withheld_from_model(entry.capability)
         schema = entry.input_schema
         tools.append(
             {
@@ -229,7 +229,7 @@ class ScriptedPlanner:
             if entry is None or not all(k in text for k in keywords):
                 continue
             arguments = self._arguments(message, entry)
-            supplied = server_supplied(entry.capability)
+            supplied = withheld_from_model(entry.capability)
             missing = [
                 name
                 for name in entry.input_schema["required"]

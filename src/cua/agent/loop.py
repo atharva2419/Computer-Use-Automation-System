@@ -288,6 +288,42 @@ class DiscoveryAgent:
         self._check_progress(tool, args)
         return None
 
+
+    def _refuse_url_with_an_argument_in_it(self, url: str) -> None:
+        """Refuse a navigation whose URL bakes in one of this run's arguments.
+
+        The recorder promotes a literal to a parameter by exact match, which
+        works for a field value and cannot work for a URL: an argument appears
+        inside a longer string, so ``/members/102777?next=update`` is not equal
+        to ``102777`` and is recorded verbatim.
+
+        The consequence is the worst kind of bug this system can have. Update
+        Member Information searched for whichever member the caller asked for,
+        opened that record, and then navigated to a hardcoded member URL --
+        editing 102777's e-mail and address no matter who was requested. It
+        replayed successfully every time and wrote to the wrong record.
+
+        So it is refused, and the reason goes back to the model while it is
+        still on the page and can reach the screen by clicking instead, which
+        is how it got to the record in the first place. Secrets are excluded:
+        a credential in a URL is a different and larger problem, and one the
+        redactor already scrubs from everything written down.
+        """
+        for name, value in self._bound.items():
+            if not value or len(value) < 4:
+                continue
+            if any(spec.name == name and spec.secret for spec in self.recorder.inputs):
+                continue
+            if value in url:
+                raise RecorderError(
+                    f"that URL contains {value!r}, the value of the {name!r} "
+                    "argument. A recorded URL is a literal, so this capability "
+                    f"would navigate to {value!r} whatever the caller asks for "
+                    "-- and would act on the wrong record without failing. "
+                    "Reach the screen by clicking a link or button on the page "
+                    "instead."
+                )
+
     def _build(
         self,
         tool: str,
@@ -300,6 +336,7 @@ class DiscoveryAgent:
             url = args.get("url")
             if not url:
                 raise ValueError("navigate needs a url")
+            self._refuse_url_with_an_argument_in_it(url)
             return None, NavigateAction(url=LiteralValue(value=url), frame=frame)
 
         described = args.get("intent", "the control")

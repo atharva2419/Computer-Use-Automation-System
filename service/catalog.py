@@ -43,19 +43,50 @@ _JSON_TYPES = {
 _OPERATOR_INPUTS = frozenset({"operator_id", "operator_password", "operator_passphrase"})
 
 
-def server_supplied(capability: Capability) -> set[str]:
-    """Inputs the service fills in, so nobody is asked for them.
+def secret_inputs(capability: Capability) -> set[str]:
+    """Credentials. Never shown to anybody, always supplied by the service.
 
-    Secrets, and the operator identity that goes with them. Signing on as one
-    operator with another's id is not a request a caller should be able to
-    make in passing, and a password is not something a conversation should
-    ever carry -- so both are decided by the service, once.
+    Not to the model, not on a form, not in a run record. A password has no
+    business in a chat transcript or a browser field, and the service holds
+    the operator session the way a signed-on terminal does.
+    """
+    return {spec.name for spec in capability.inputs if spec.secret}
+
+
+def operator_inputs(capability: Capability) -> set[str]:
+    """*Which* operator is acting. Not a credential -- a business choice.
+
+    Withheld from the model, which should not invent an identity out of prose:
+    "place a hold" must not become "place a hold as a supervisor" because the
+    sentence sounded senior. But shown to a person driving the dashboard, and
+    overridable by any caller, because teller-versus-supervisor is exactly the
+    decision Place Account Hold exists to demonstrate.
+
+    Earlier this was folded in with the secrets. That hid the field from the
+    dashboard entirely, which made the supervisor-gating demo impossible to
+    perform from the UI -- the strongest thing in the project, unreachable
+    except by curl.
     """
     return {
         spec.name
         for spec in capability.inputs
-        if spec.secret or spec.name in _OPERATOR_INPUTS
+        if not spec.secret and spec.name in _OPERATOR_INPUTS
     }
+
+
+def withheld_from_model(capability: Capability) -> set[str]:
+    """What the chatbot's planner is never shown: credentials and identity."""
+    return secret_inputs(capability) | operator_inputs(capability)
+
+
+def server_supplied(capability: Capability) -> set[str]:
+    """Inputs the service fills a default for when the caller omits them.
+
+    The same set the model is not shown, but for a different reason: here it
+    is about who supplies a value, not who may see one. An explicit argument
+    always wins -- see ``operator_credentials``.
+    """
+    return withheld_from_model(capability)
 
 
 def operator_credentials(capability: Capability) -> dict[str, str]:
@@ -152,7 +183,17 @@ class CatalogEntry:
             # Inputs the service fills in rather than the caller: the operator
             # identity and its credential. Published so a UI knows not to ask
             # and an agent knows not to try.
+            # Two different questions. "withheld_from_ui" is what a person is
+            # never shown (credentials); "server_supplied" is what the service
+            # will fill in if the caller says nothing. Operator identity is in
+            # the second but not the first: shown, defaulted, overridable.
+            "withheld_from_ui": sorted(secret_inputs(cap)),
             "server_supplied": sorted(server_supplied(cap)),
+            "defaults": {
+                name: value
+                for name, value in operator_credentials(cap).items()
+                if name not in secret_inputs(cap)
+            },
             "input_schema": self.input_schema,
             "output_schema": self.output_schema,
             # What the caller may get back other than success. Publishing the

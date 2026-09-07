@@ -599,3 +599,39 @@ def test_an_unused_declared_input_is_refused(base_url: str) -> None:
     told = json.dumps(agent._messages, default=str)
     assert "never used by any step" in told
     assert "member_id" in told
+
+
+def test_a_navigation_url_may_not_bake_in_an_argument(base_url: str) -> None:
+    """A recorded URL is a literal, so an argument inside one is a wrong-record bug.
+
+    Update Member Information had exactly this: it searched for the member the
+    caller asked for, opened that record, then navigated to a hardcoded
+    /members/102777 and edited someone else. It replayed green every time.
+
+    Exact-match promotion cannot catch it -- '102777' != '/members/102777?next=update'
+    -- so the navigation is refused and the model is told to click instead.
+    """
+    script = [
+        ("navigate", {"intent": "Jump straight to the member", "frame": "top",
+                      "url": f"{base_url}/member/10001"}),
+        ("done", {"summary": "n/a", "success_text": "MEMBER RECORD", "frame": "main"}),
+    ]
+    agent, session, surface, _ = _agent(base_url, script)
+    try:
+        agent.discover("read the savings balance", f"{base_url}/login", BOUND)
+    finally:
+        surface.close()
+
+    told = json.dumps(agent._messages, default=str)
+    assert "would navigate to" in told
+    assert "10001" in told
+
+
+def test_a_navigation_url_without_an_argument_is_fine(base_url: str) -> None:
+    """The guard must not refuse ordinary navigation."""
+    agent, session, surface, _ = _agent(base_url, _happy_script(base_url))
+    try:
+        result = agent.discover("read the savings balance", f"{base_url}/login", BOUND)
+    finally:
+        surface.close()
+    assert result.status == "recorded", result.reason

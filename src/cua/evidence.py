@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .redaction import Redactor
 from .schema.capability import Capability
 from .schema.result import FailureDetail, StepRecord
 
@@ -57,6 +58,13 @@ class FileEvidenceSink:
     root: Path = DEFAULT_EVIDENCE_ROOT
     label: str = ""
     directory: Path | None = None
+
+    # Scrubs the free text that passes through here. Optional so a caller that
+    # has no policy still gets evidence, but every real path supplies one:
+    # "everything written down is scrubbed" is a property of writing, so it
+    # belongs at the point of writing rather than at each of the five places
+    # that construct a sink.
+    redactor: Redactor | None = None
 
     def open(self, capability: Capability, run_kind: str = "replay") -> Path:
         """Create the run directory and write the header line."""
@@ -87,10 +95,32 @@ class FileEvidenceSink:
     # -- EvidenceSink protocol --------------------------------------------
 
     def on_step(self, run_id: str, record: StepRecord) -> None:
-        payload = record.model_dump(mode="json")
+        payload = self._scrub_text(record.model_dump(mode="json"))
         payload["kind"] = "step"
         payload["run_id"] = run_id
         self._append(payload)
+
+
+    # -- redaction ---------------------------------------------------------
+
+    _TEXT_FIELDS = ("intent", "note", "expected", "observed", "reason")
+
+    def _scrub_text(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Redact the free-text fields of a record on the way to disk.
+
+        A step's ``intent`` is written by the model at record time and is
+        copied into the artifact and then into every run that replays it.
+        "Select From Share as 102777-MMKT-4" was reaching evidence unredacted
+        while the outputs beside it were scrubbed -- the redaction policy has a
+        pattern for exactly that shape, and it was simply never applied here.
+        """
+        if self.redactor is None:
+            return payload
+        for field_name in self._TEXT_FIELDS:
+            value = payload.get(field_name)
+            if isinstance(value, str) and value:
+                payload[field_name] = self.redactor.text(value)
+        return payload
 
     def on_failure(
         self,
@@ -125,6 +155,7 @@ class FileEvidenceSink:
             return
 
         summary = result.model_dump(mode="json")
+        summary["steps"] = [self._scrub_text(s) for s in summary.get("steps", [])]
         summary["outputs_written"] = False
 
         # Declared outputs are returned to the caller in memory but are not

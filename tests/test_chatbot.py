@@ -22,7 +22,7 @@ from service.chatbot import (
     Plan,
     ScriptedPlanner,
     operator_credentials,
-    server_supplied,
+    withheld_from_model,
     summarise,
     tool_definitions,
 )
@@ -53,7 +53,7 @@ class _Run:
 
 def test_credentials_are_withheld_from_the_model(entry: CatalogEntry):
     """A model cannot leak a field it was never told exists."""
-    withheld = server_supplied(entry.capability)
+    withheld = withheld_from_model(entry.capability)
     assert "operator_password" in withheld
     assert "operator_id" in withheld
 
