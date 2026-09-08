@@ -616,3 +616,67 @@ class _Combined:
     def on_result(self, run_id, result, capability) -> None:
         for sink in self.sinks:
             sink.on_result(run_id, result, capability)
+
+
+def test_the_run_budget_is_not_charged_for_time_a_human_took(
+    capability: Capability, gate: PolicyGate
+) -> None:
+    """Time waiting for a person is not time the automation spent running.
+
+    The dashboard handler waits up to 900s for an operator while the run budget
+    is 120s. If the budget counted the wait, an operator who thought for longer
+    than the budget would be timed out the moment they approved -- which is what
+    happened in rehearsal at 117 seconds, and reads as "approving broke it"
+    rather than "the clock was wrong".
+
+    Asserts on the engine's own deadline, sampled from inside the handler, so it
+    exercises the adjustment in replay.py rather than re-deriving it. An earlier
+    version did the arithmetic in its own body, passed with the fix reverted,
+    and so reported a safety it was not checking.
+    """
+    held_for = 1.0
+    sampled: dict[str, float] = {}
+
+    class SlowButEffective:
+        """Takes a long time, then actually fixes the problem."""
+
+        def __init__(self, inner: ScriptedOperator) -> None:
+            self.inner = inner
+
+        def request(self, context: EscalationContext) -> EscalationOutcome:
+            sampled["on_entry"] = engine._deadline
+            time.sleep(held_for)
+            return self.inner.request(context)
+
+    surface = PlaywrightWebSurface(headless=True).start()
+    session = Session(surface=surface)
+    try:
+        engine = ReplayEngine(
+            session,
+            gate=gate,
+            sink=ArmAfterStep("open_member_search", expire_session=True),
+            escalation=SlowButEffective(
+                ScriptedOperator(
+                    decisions=[
+                        EscalationOutcome(
+                            resolved=True,
+                            resolution="resumed",
+                            operator="slow@test",
+                            resume_from_step="open_member_search",
+                        )
+                    ],
+                    on_takeover=_reauthenticate(capability),
+                )
+            ),
+        )
+        result = engine.run(capability, {"member_id": "10001", **CREDS})
+    finally:
+        surface.close()
+
+    assert "on_entry" in sampled, "the operator was never consulted"
+    moved = engine._deadline - sampled["on_entry"]
+    assert moved >= held_for * 0.9, (
+        f"the deadline moved by {moved:.2f}s but the operator held the session "
+        f"for {held_for}s -- the wait is being charged to the run budget"
+    )
+    assert result.status == "success", "and the run should still complete"

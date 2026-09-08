@@ -237,6 +237,7 @@ class ReplayEngine:
         sink: EvidenceSink | None = None,
         redactor: Redactor | None = None,
         max_duration_ms: int = 120_000,
+        max_escalations: int = 5,
     ) -> None:
         self.session = session
         # Defaults to the shipped policy, and raises if it is missing rather
@@ -255,6 +256,13 @@ class ReplayEngine:
             policy = getattr(self.gate, "policy", None)
             self.redactor = policy.redactor() if policy is not None else Redactor()
         self.max_duration_ms = max_duration_ms
+        # A run that has stopped for a person five times is not making
+        # progress, and something has to say so. The run deadline used to
+        # be the accidental bound: it counted the time a human spent
+        # thinking, so a loop died of the same clock that killed legitimate
+        # slow approvals. Excluding the wait fixed the second and removed
+        # the first, so the bound is now explicit and about the right thing.
+        self.max_escalations = max_escalations
 
         self.run_id = uuid.uuid4().hex[:12]
         self._steps: list[StepRecord] = []
@@ -655,7 +663,36 @@ class ReplayEngine:
             step_ids=[s.id for s in capability.steps],
             suggest_resume=lambda: self.suggest_resume_point(capability),
         )
+        # The run deadline measures how long the *automation* may take, not
+        # how long a person takes to answer it. Those are different clocks, and
+        # conflating them makes the escalation path unusable: the dashboard
+        # handler waits up to fifteen minutes for an operator while the run
+        # budget is two, so an operator who thinks for longer than the budget
+        # gets a timeout the instant they approve, having done nothing wrong.
+        #
+        # Observed exactly that in rehearsal: 117 seconds to read a confirmation
+        # screen and click Approve, and the run died on resume.
+        if len(self._escalations) >= self.max_escalations:
+            self._terminate_failure(
+                capability,
+                FailureDetail(
+                    category="escalation_unresolved",
+                    step_id=step.id,
+                    step_index=index,
+                    intent=step.intent,
+                    expected=f"at most {self.max_escalations} handoffs in one run",
+                    observed=(
+                        f"the run has stopped for a human {len(self._escalations)} "
+                        "times and reached the same step again; whatever is wrong "
+                        "is not being fixed by resuming"
+                    ),
+                    signal_id=signal_id,
+                ),
+            )
+
+        paused_at = time.monotonic()
         outcome = self.escalation.request(context)
+        self._deadline += time.monotonic() - paused_at
 
         # The live handler was given the unredacted context deliberately: the
         # operator is looking at the real screen, so scrubbing their briefing
