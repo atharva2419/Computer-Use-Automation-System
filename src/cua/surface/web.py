@@ -97,6 +97,47 @@ class PlaywrightWebSurface:
         self._page = context.new_page()
         return self
 
+    def arm_fault(self, kind: str, path_glob: str = "*/members*", count: int = 1) -> None:
+        """Force one of the target's runtime faults, for this session only.
+
+        The brief exposes six faults and three ways to trigger them: a
+        ``?inject=`` query parameter per request, the System Settings screen
+        globally, or a random error rate. Only the first is safe on a shared
+        target -- arming a fault globally hits every other user of the app, and
+        doing that is what repeatedly took the sample host down.
+
+        But a recorded capability navigates by *clicking*, so there is nowhere
+        to put a query parameter: the one explicit navigation is to the sign-on
+        page, where the app ignores ``inject`` because nobody is authenticated
+        yet. Rewriting the entry URL therefore does nothing, which is exactly
+        what an earlier version of this did.
+
+        So the parameter is added in flight. A route handler rewrites the next
+        ``count`` document navigations that match ``path_glob``, which by
+        default is the first authenticated page -- mid-flow, where the fault is
+        honoured and where it is actually interesting. Nobody else's requests
+        are touched, because the rewrite happens inside this browser context.
+
+        Demo and test affordance only. Nothing in replay calls it.
+        """
+        remaining = {"n": count}
+
+        def handler(route: Any) -> None:
+            request = route.request
+            url = request.url
+            if (
+                remaining["n"] <= 0
+                or request.resource_type != "document"
+                or "inject=" in url
+            ):
+                route.continue_()
+                return
+            remaining["n"] -= 1
+            joiner = "&" if "?" in url else "?"
+            route.continue_(url=f"{url}{joiner}inject={kind}")
+
+        self.page.route(path_glob, handler)
+
     @property
     def page(self) -> Page:
         if self._page is None:

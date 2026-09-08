@@ -105,28 +105,6 @@ def render(result: Any) -> None:
 
 
 
-def _inject_fault(capability: Capability, kind: str) -> None:
-    """Append ``?inject=<kind>`` to the first navigation of a loaded capability.
-
-    The brief exposes each of the target's six runtime faults per-request this
-    way, which makes it the safe way to rehearse one: arming a fault in the
-    System Settings console applies it to everybody, and doing that is what
-    took the shared target down twice during this project.
-
-    In memory only. The artifact on disk keeps its recorded URL, so a drill can
-    never leave a capability that always faults.
-    """
-    for step in capability.steps:
-        url = getattr(step.action, "url", None)
-        value = getattr(url, "value", None)
-        if step.action.kind != "navigate" or not value:
-            continue
-        joiner = "&" if "?" in value else "?"
-        step.action.url = LiteralValue(value=f"{value}{joiner}inject={kind}")
-        return
-    raise SystemExit("this capability has no literal navigation to inject a fault into")
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("artifact", type=Path)
@@ -176,9 +154,7 @@ def main() -> int:
     args = parser.parse_args()
 
     capability = Capability.model_validate_json(args.artifact.read_text("utf-8"))
-    if args.inject:
-        _inject_fault(capability, args.inject)
-        print(f"{YELLOW}fault drill{RESET}  forcing ?inject={args.inject} on the entry navigation")
+
     supplied = parse_params(args.param)
 
     gate = PolicyGate.from_file(args.policy or DEFAULT_POLICY_PATH)
@@ -200,6 +176,12 @@ def main() -> int:
     surface = PlaywrightWebSurface(
         headless=not args.headed, slow_mo_ms=args.slow
     ).start()
+    if args.inject:
+        # In flight, not on the entry URL: this app only honours ?inject=
+        # on authenticated routes, and the only explicit navigation a
+        # capability makes is to the sign-on page.
+        surface.arm_fault(args.inject)
+        print(f"{YELLOW}fault drill{RESET}  next authenticated page will carry ?inject={args.inject}")
     session = Session(surface=surface)
     try:
         result = ReplayEngine(
