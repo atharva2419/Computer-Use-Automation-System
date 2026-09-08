@@ -400,15 +400,21 @@ is committed.
 
 **Against the hosted target** (`20260904*`, `20260905*`):
 
+Directory names say which capability and what the run demonstrates, so the set
+can be read without opening anything.
+
 | Run | Shows |
 |---|---|
-| `…-discovery` (213107Z) | Recording `open_new_share` — the model driving a live review→post flow |
-| `…-api-transfer_funds` (044300Z) | **Escalation end to end**: paused at the irreversible step, approved, completed |
-| `…-api-transfer_funds` (232545Z) | A real overdraw returned as `TRANSACTION_REJECTED`, no funds moved |
-| `…-api-place_account_hold` (084504Z) | A teller refused a supervisor-only action, before the irreversible step |
-| `…-api-place_account_hold` (084511Z) | The same capability completing under `super1` |
-| `…-api-update_information` (212017Z) | Field validation returned as `INPUT_REJECTED` |
-| `…-api-read_balance` (013316Z) | `MEMBER_NOT_FOUND` — a lookup that legitimately found nothing |
+| `…-transfer_funds-escalation-approved-success` | **Escalation end to end**: paused at the irreversible step, approved, completed |
+| `…-transfer_funds-hard-failure-application-error` | The host returned a 500 mid-flow; detected, named, stopped **before** the post |
+| `…-transfer_funds-outcome-transaction-rejected` | A real overdraw returned as `TRANSACTION_REJECTED`, no funds moved |
+| `…-place_account_hold-outcome-supervisor-required` | A teller refused a supervisor-only action, before the irreversible step |
+| `…-place_account_hold-escalation-approved-success` | The same capability completing under `super1` |
+| `…-update_information-outcome-input-rejected` | Field validation returned as `INPUT_REJECTED` |
+| `…-read_balance-outcome-member-not-found` | `MEMBER_NOT_FOUND` — a lookup that legitimately found nothing |
+| `…-open_new_share-discovery-exhausted-deny-trap` | A discovery run that got stuck on a denied route, kept deliberately |
+| `…-<capability>-discovery` | The recording that produced each shipped artifact — one per capability |
+| `…-<capability>-discovery-verify` | The replay that promoted it to `approved`, where the risk allowed it |
 
 The kept failure is the instructive one: the model proposed
 `"Savings [REDACTED:account_number] 4210.55"` as proof it had arrived, because
