@@ -164,7 +164,12 @@ document.querySelectorAll("form.invoke").forEach(form => {
       out.innerHTML = '<span class="b-bad">' + res.status + "</span> " + esc(body.detail || "");
       out.className = "result";
     } catch (e) {
-      out.textContent = String(e);
+      // Almost always a stopped server: the page is still open in the browser
+      // but nothing is listening. Said plainly, because the alternative is a
+      // grey "TypeError: Failed to fetch" that reads as nothing happening.
+      out.innerHTML = '<span class="b-bad">no response from the service</span> '
+        + '<span class="dim">-- is it still running? restart with '
+        + '<span class="mono">python scripts/serve.py</span> and reload</span>';
     }
     btn.disabled = false;
   });

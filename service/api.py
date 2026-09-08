@@ -46,6 +46,11 @@ from .runner import CapabilityRunner
 DEFAULT_POLICY = Path("config/policy.meridian-hosted.yaml")
 DEFAULT_ARTIFACTS = Path("artifacts")
 
+# Pause between browser operations when a person can see the window. Chosen
+# by watching: fast enough not to drag a 15-step flow, slow enough to read
+# each field being filled.
+DEMO_SLOW_MO_MS = 250
+
 
 class InvokeRequest(BaseModel):
     """Arguments for one invocation."""
@@ -95,6 +100,7 @@ def create_app(
     policy: Path | str = DEFAULT_POLICY,
     headed: bool | None = None,
     chat_product: str | None = "meridian-hosted",
+    slow_mo_ms: int | None = None,
 ) -> FastAPI:
     catalog = CapabilityCatalog(artifacts)
     # The chatbot is offered one product's capabilities, not every artifact on
@@ -105,13 +111,23 @@ def create_app(
     # Runs that finished before this process started -- including every
     # discovery run, which the service never executes itself.
     archive = RunArchive()
+    is_headed = (os.environ.get("CUA_HEADLESS", "") != "1") if headed is None else headed
+    # Slow motion defaults to something watchable when a browser is visible and
+    # to nothing when it is not. A headless run has no audience, and slowing it
+    # would just make the tests and any unattended use longer for no reason.
+    if slow_mo_ms is None:
+        slow_mo_ms = int(os.environ.get("CUA_SLOW_MO_MS", "0")) or (
+            DEMO_SLOW_MO_MS if is_headed else 0
+        )
+
     runner = CapabilityRunner(
         catalog=catalog,
         policy_path=policy,
+        slow_mo_ms=slow_mo_ms,
         # Headed by default: an operator cannot take over a browser they
         # cannot see, and the handoff is a required path rather than a
         # nice-to-have. Override with CUA_HEADLESS=1 for unattended use.
-        headed=(os.environ.get("CUA_HEADLESS", "") != "1") if headed is None else headed,
+        headed=is_headed,
     )
 
     app = FastAPI(

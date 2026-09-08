@@ -181,10 +181,15 @@ class CapabilityRunner:
         policy_path: Path | str,
         headed: bool = False,
         evidence_root: Path | str = Path("evidence/runs"),
+        slow_mo_ms: int = 0,
     ) -> None:
         self.catalog = catalog
         self.policy_path = Path(policy_path)
         self.headed = headed
+        # Pause between browser operations. Only meaningful when somebody is
+        # watching: a replay at full speed is a blur, and the point of running
+        # headed is that a person can follow what the automation is doing.
+        self.slow_mo_ms = slow_mo_ms
         self.evidence_root = Path(evidence_root)
 
         self._runs: dict[str, Run] = {}
@@ -287,7 +292,9 @@ class CapabilityRunner:
         operator = DashboardOperator(run=run, sink=sink, redactor=redactor)
         self._operators[run_id] = operator
 
-        surface = PlaywrightWebSurface(headless=not self.headed).start()
+        surface = PlaywrightWebSurface(
+            headless=not self.headed, slow_mo_ms=self.slow_mo_ms
+        ).start()
         session = Session(surface=surface)
         try:
             result = ReplayEngine(

@@ -37,6 +37,17 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument(
+        "--slow",
+        type=int,
+        default=None,
+        metavar="MS",
+        help=(
+            "Pause this many milliseconds between browser operations, so a "
+            "person can follow the replay. Defaults to 250 when the browser "
+            "is visible and 0 when it is not; 0 disables it."
+        ),
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -44,11 +55,14 @@ def main() -> int:
         artifacts=args.artifacts,
         policy=args.policy,
         headed=not args.headless,
+        slow_mo_ms=args.slow,
     )
     base = f"http://{args.host}:{args.port}"
     print(f"  catalog  {len(app.state.catalog)} capabilities from {args.artifacts}")
     print(f"  policy   {args.policy}")
-    print(f"  browser  {'headless' if args.headless else 'visible'}")
+    slow = app.state.runner.slow_mo_ms
+    print(f"  browser  {'headless' if args.headless else 'visible'}"
+          + (f", {slow}ms between actions" if slow else ""))
     print()
     print(f"  {base}/ui        capabilities, and a form to invoke each")
     print(f"  {base}/ui/chat   chatbot")
