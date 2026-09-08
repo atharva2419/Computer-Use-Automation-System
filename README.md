@@ -173,6 +173,8 @@ attached. Add `--operator` to approve it and let the flow finish.
 ### Other things to run
 
 ```bash
+.venv/Scripts/python.exe scripts/doctor.py           # is this checkout working? five checks
+.venv/Scripts/python.exe scripts/target_state.py     # the hosted member's shares, and which are usable
 .venv/Scripts/python.exe scripts/demo_surface.py     # watch the locator layer, narrated
 .venv/Scripts/python.exe -m pytest -q                # 197 tests, ~4 min, real browser
 .venv/Scripts/python.exe -m pyright --pythonpath .venv/Scripts/python.exe \n    src/cua service tests scripts

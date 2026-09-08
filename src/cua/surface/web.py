@@ -97,7 +97,7 @@ class PlaywrightWebSurface:
         self._page = context.new_page()
         return self
 
-    def arm_fault(self, kind: str, path_glob: str = "*/members*", count: int = 1) -> None:
+    def arm_fault(self, kind: str, path_glob: str = "**/members**", count: int = 1) -> None:
         """Force one of the target's runtime faults, for this session only.
 
         The brief exposes six faults and three ways to trigger them: a
